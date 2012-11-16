@@ -128,7 +128,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QLineEdit" name="descriptionlineEdit"/>
+       <widget class="QLineEdit" name="descriptionLineEdit"/>
       </item>
      </layout>
     </item>

@@ -7,8 +7,12 @@ from collections import deque
 from pprint import pprint as pp
 import pdb
 from copy import deepcopy as dcp
-from PySide import QtCore, QtGui, QtNetwork
+from PySide import QtGui, QtCore
+from PySide.QtGui import (QWidget, QTabWidget, QItemSelectionModel, 
+                          QMessageBox, QTableView, QSortFilterProxyModel,
+                          QAbstractItemView, QItemSelection)
 from ui_main_window import Ui_MainWindow
+from tablemodel import TableModel
 
 
 class MainWindow(QtGui.QMainWindow):
@@ -35,6 +39,9 @@ class MainWindow(QtGui.QMainWindow):
 
         self.ui = ui
         self.ui.setupUi(self)
+
+        # Table
+        self.table_model = TableModel()
 
         self.moos_data = (None, None, None) # latest
         self.survey_points = deque() # each element: [n, (x,y,z), 'descr']
@@ -73,8 +80,12 @@ class MainWindow(QtGui.QMainWindow):
                 _var[i] = _2sum[i]/n - _mean[i]**2
 
             if sum(_var) < self.variance_threshold:
-                self.survey_points.append(
-                    [len(self.survey_points)+1, _mean, self.ui.text()] )
+                x = _mean[0]
+                y = _mean[1]
+                z = _mean[2]
+                description = self.ui.descriptionLineEdit.text()
+                self.addEntry(x=x, y=y, z=z, description=description)
+
                 print('Survey Point Added: ( %f , %f , %f )  %s' % \
                     _mean[0:2], self.ui.text())
                 keep_going = False
@@ -82,6 +93,33 @@ class MainWindow(QtGui.QMainWindow):
         
     def writeToFile(self):
         pass
+
+    def addEntry(self, x=None, y=None, z=None, description=None):
+        if x is None and y is None and z is None and description is None:
+            raise Exception('I have no dialog box set up for manual entry')
+
+        point = {"x":x, "y":y, "z":z, "description":description}
+        points = self.table_model.points[:]
+
+        # TODO check for duplicates by attempting to remove
+        # Assume new point
+        self.table_model.insertRows(0) # at position zero
+
+        ix = self.table_model.index(0, 0, QtCore.QModelIndex())
+        self.table_model.setData(ix, point["x"], Qt.EditRole)
+
+        ix = self.table_model.index(0, 1, QtCore.QModelIndex())
+        self.table_model.setData(ix, point["y"], Qt.EditRole)
+
+        ix = self.table_model.index(0, 2, QtCore.QModelIndex())
+        self.table_model.setData(ix, point["z"], Qt.EditRole)
+
+        ix = self.table_model.index(0, 3, QtCore.QModelIndex())
+        self.table_model.setData(ix, point["description"], Qt.EditRole)
+
+        # may need some resizing
+        self.currentWidget.resizeRowToContents(ix.row())
+
 
 
 if __name__ == '__main__':

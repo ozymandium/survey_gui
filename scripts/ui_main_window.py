@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'scripts/main_window.ui'
 #
-# Created: Thu Nov 15 15:12:00 2012
+# Created: Thu Nov 15 23:14:53 2012
 #      by: pyside-uic 0.2.13 running on PySide 1.1.0
 #
 # WARNING! All changes made in this file will be lost!
@@ -64,9 +64,9 @@ class Ui_MainWindow(object):
         self.label_2.setFont(font)
         self.label_2.setObjectName("label_2")
         self.horizontalLayout_2.addWidget(self.label_2)
-        self.descriptionlineEdit = QtGui.QLineEdit(self.centralwidget)
-        self.descriptionlineEdit.setObjectName("descriptionlineEdit")
-        self.horizontalLayout_2.addWidget(self.descriptionlineEdit)
+        self.descriptionLineEdit = QtGui.QLineEdit(self.centralwidget)
+        self.descriptionLineEdit.setObjectName("descriptionLineEdit")
+        self.horizontalLayout_2.addWidget(self.descriptionLineEdit)
         self.verticalLayout_2.addLayout(self.horizontalLayout_2)
         self.tableView = QtGui.QTableView(self.centralwidget)
         self.tableView.setObjectName("tableView")
