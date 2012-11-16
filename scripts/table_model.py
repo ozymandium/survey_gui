@@ -26,19 +26,14 @@ class TableModel(QtCore.QAbstractTableModel):
             return None
 
         if role == QtCore.Qt.DisplayRole:
-            x = self.points[index.row()]["x"]
-            y = self.points[index.row()]["y"]
-            z = self.points[index.row()]["z"]
-            description = self.points[index.row()]["description"]
-
             if index.column() == 0:
-                return x
+                return self.points[index.row()]["x"]
             elif index.column() == 1:
-                return y
+                return self.points[index.row()]["y"]
             elif index.column() == 2:
-                return z
+                return self.points[index.row()]["z"]
             elif index.column() == 3:
-                return description
+                return self.points[index.row()]["description"]
 
         return None
 

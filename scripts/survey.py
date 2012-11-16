@@ -10,10 +10,10 @@ from copy import deepcopy as dcp
 from PySide import QtGui, QtCore
 from PySide.QtGui import (QWidget, QTabWidget, QItemSelectionModel, 
                           QMessageBox, QTableView, QSortFilterProxyModel,
-                          QAbstractItemView, QItemSelection)
+                          QAbstractItemView, QItemSelection, QFileDialog)
 from ui_main_window import Ui_MainWindow
 from table_model import TableModel
-from open_dialog_widget import OpenDialog
+from manual_dialog import ManualDialog
 
 
 class MainWindow(QtGui.QMainWindow):
@@ -46,7 +46,9 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.tableView.setModel(self.table_model)
         self.ui.tableView.horizontalHeader().setStretchLastSection(True)
 
+        self.output_file_dialog = QFileDialog()
         self.output_file = None
+        self.manual_dialog = ManualDialog()
 
         self.moos_data = (None, None, None, None, None, None) # latest
         self.survey_points = deque() # each element: [n, (x,y,z), 'descr']
@@ -58,13 +60,12 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.actionOpen_Log.triggered.connect(self.openLog)
 
     @QtCore.Slot()
-    def openLog(checked):
-        dialog = OpenDialog()
-        if dialog.exec_():
-            pass
+    def openLog(self):
+        self.output_file = open(self.output_file_dialog.getOpenFileName()[0], 'w')
+        print('log file selected: '), pp(self.output_file)
 
     @QtCore.Slot(tuple)
-    def receivePosition(pos):
+    def receivePosition(self, pos):
         """connected to moos widget's position sender"""
         self.moos_data = pos
 
@@ -106,6 +107,10 @@ class MainWindow(QtGui.QMainWindow):
                     _mean[0:2], self.ui.text())
                 keep_going = False
 
+        @QtCore.Slot()
+        def addManualPoint(self):
+            self.
+
     def showVariance(self, var=(0, 0, 0)):
         """update the variance LCD's while waiting for point to go low"""
         self.ui.xVarianceLcd.display(var[0])
@@ -137,6 +142,18 @@ class MainWindow(QtGui.QMainWindow):
 
         # may need some resizing
         self.currentWidget.resizeRowToContents(ix.row())
+
+    def getAllData(self):
+        data = []
+        for n in range(len(self.table_model.points)):
+            data[n] = []
+            for w in range(3):
+                ix = [self.table_model.index(n, w, QtCore.QModelIndex)]
+                data[n].append(self.table_model.data(ix))
+        return data
+
+    def
+
 
 
 
