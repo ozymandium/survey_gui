@@ -42,6 +42,9 @@ class MainWindow(QtGui.QMainWindow):
 
         # Table
         self.table_model = TableModel()
+        self.ui.tableView.setModel(self.table_model)
+        self.ui.tableView.horizontalHeader().setStretchLastSection(True)
+
 
         self.moos_data = (None, None, None) # latest
         self.survey_points = deque() # each element: [n, (x,y,z), 'descr']
@@ -90,9 +93,6 @@ class MainWindow(QtGui.QMainWindow):
                     _mean[0:2], self.ui.text())
                 keep_going = False
 
-        
-    def writeToFile(self):
-        pass
 
     def addEntry(self, x=None, y=None, z=None, description=None):
         if x is None and y is None and z is None and description is None:

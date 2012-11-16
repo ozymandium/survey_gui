@@ -46,7 +46,7 @@ class TableModel(QtCore.QAbstractTableModel):
         if role != QtCore.Qt.DisplayRole:
             return None
 
-        if orientation == QtHorizontal:
+        if orientation == QtCore.Qt.Horizontal:
             if section == 0:
                 return "X"
             elif section == 1:
