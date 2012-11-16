@@ -13,36 +13,39 @@ import pdb
 
 class MoosWidget(QtGui.QWidget):
     """
-    Qt implementation of the MOOSCommClient
+        Qt implementation of the MOOSCommClient
     """
     sendPosition = QtCore.Signal(tuple)
 
+    moosdb_ip = '127.0.0.1'
+    moosdb_port = 9000
+
     class MoosThread(QtCore.QThread):
         """Thread for the MOOSCommClient"""
-        this_ip = '127.0.0.1'
-        this_port = 9000
-
         def run():
             """reimplement run()"""
             socket = QtNetwork.QTcpSocket()
-            socket.connectToHost(MoosThread.this_ip, MoosThread.this_port)
+            socket.connectToHost(MoosWidget.moosdb_ip, MoosWidget.moosdb_port)
             self.exec_()
 
     def __init__(self, config, parent=None):
         QtGui.QWidget.__init__(self, parent)
-        self.thread = MoosThread()
-        # TODO implement configuring port/ip
-        # self.thread.this_ip = config["ip"]
-        # self.thread.this_port = config["port"]
-        
+
+        MoosWidget.moosdb_ip = config['ip']
+        MoosWidget.moosdb_port = config['port']
+
+        self.thread = MoosWidget.MoosThread()
+
         self.moos_client = MOOSCommClient()
         self.moos_client.SetOnConnectCallBack(self.onConnect)
         self.moos_client.SetOnMailCallBack(self.onMail)
-        self.moos_client.Run(self.thread.this_ip, self.thread.this_port, \
+        self.moos_client.Run(self.moosdb_ip, self.moosdb_port, \
                              'survey', 50)
 
         self.time_buffer = config["time_buffer"]
         self.desired_variables = config['desired_variables']
+        self.sensor = config['sensor']
+
         self.partial_positions = {}
         self.current_position = {}
         for i in self.desired_variables:
@@ -82,7 +85,7 @@ class MoosWidget(QtGui.QWidget):
             name = msg.GetKey() # 'z_____' String
             
             if msg.GetSource() != self.sensor:
-                raise Warning('Receiving messages from undesired sensor')
+                raise Warning('QtMOOS Receiving messages from undesired sensor')
                 return
             
             if msg.IsDouble():

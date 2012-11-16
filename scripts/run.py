@@ -9,18 +9,13 @@ from survey import MainWindow
 from moos import MoosWidget
 from yaml import load
 from PySide import QtGui
-import sys
+import sys, os
 from ui_main_window import Ui_MainWindow
 
-
 ### Settings ###
-viz_config_file = '../cfg/viz.yaml'
-viz_stream = file(viz_config_file, 'r')
-viz_config = load(viz_stream)
-
-moos_config_file = '../cfg/moos.yaml'
-moos_stream = file(moos_config_file, 'r')
-moos_config = load(moos_stream)
+pkg_dir = os.path.abspath('moos_rtk_survey')
+viz_config = load(file(pkg_dir+'/cfg/survey.yaml', 'r'))
+moos_config = load(file(pkg_dir+'/cfg/moos.yaml', 'r'))
 
 
 def main():
@@ -37,8 +32,8 @@ def main():
     main_window.show()
 
     # Connect Signals/Slots
-    # moos_widget.fvel_updated.connect(main_window.onFollVel_upd)
-    # moos_widget.path_updated.connect(main_window.onPath_upd)
+    main_window.requestPosition.connect(moos_widget.onPositionRequested)
+    moos_widget.sendPosition.connect(main_window.receivePosition)
 
     sys.exit(app.exec_())
 

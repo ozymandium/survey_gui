@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-import sys
-import os
+import sys, os
 import fileinput
 from yaml import load
 from time import sleep
@@ -14,33 +13,40 @@ from ui_main_window import Ui_MainWindow
 
 class MainWindow(QtGui.QMainWindow):
     """survey mainwindow class"""
-    requestPosition = QtCore.QSignal()
+    requestPosition = QtCore.Signal()
+
+    viz_ip = '127.0.0.1'
+    viz_port = 9001
 
     class VizThread(QtCore.QThread):
-        """Thread for the LFviz MainWindow"""
-        this_ip = '127.0.0.1'
-        this_port = 9001
-
+        """Thread for the viz MainWindow"""
         def run():
             """reimplement run()"""
             socket = QtNetwork.QTcpSocket()
-            socket.connectToHost(VizThread.this_ip, VizThread.this_port)
+            socket.connectToHost(MainWindow.viz_ip, MainWindow.viz_port)
             self.exec_()
 
     def __init__(self, ui, config):
         QtGui.QMainWindow.__init__(self)
-        self.thread = VizThread()
+        
+        MainWindow.viz_ip = config['ip']
+        MainWindow.viz_port = config['port']
+        self.thread = MainWindow.VizThread()
+
         self.ui = ui
         self.ui.setupUi(self)
 
-        self.moos_data = (None)*6 # latest
-        self.survey_points = deque()
+        self.moos_data = (None, None, None) # latest
+        self.survey_points = deque() # each element: [n, (x,y,z), 'descr']
 
         self.variance_threshold = config["variance_threshold"]
 
+        # UI Signals/Slots
+        self.ui.recordButton.released.connect(self.onRecordRequested)
+
     @QtCore.Slot(tuple)
-    def receive_position_(pos):
-        """connected to moos widget's send_position_"""
+    def receivePosition(pos):
+        """connected to moos widget's position sender"""
         self.moos_data = pos
 
     @QtCore.Slot()
@@ -52,7 +58,7 @@ class MainWindow(QtGui.QMainWindow):
         keep_going = True
         while keep_going:
             # Get values
-            MainWindow.requestPosition.emit()
+            MainWindow.requestPosition()
             sleep(0.1) # let moos reply
             pos = self.moos_data[0:2]
 
@@ -67,12 +73,15 @@ class MainWindow(QtGui.QMainWindow):
                 _var[i] = _2sum[i]/n - _mean[i]**2
 
             if sum(_var) < self.variance_threshold:
-                self.survey_points.append()
-                print('Survey Point Added: ( %f , %f , %f )' %0)
+                self.survey_points.append(
+                    [len(self.survey_points)+1, _mean, self.ui.text()] )
+                print('Survey Point Added: ( %f , %f , %f )  %s' % \
+                    _mean[0:2], self.ui.text())
                 keep_going = False
 
         
     def writeToFile(self):
+        pass
 
 
 if __name__ == '__main__':
