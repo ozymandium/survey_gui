@@ -12,7 +12,8 @@ from PySide.QtGui import (QWidget, QTabWidget, QItemSelectionModel,
                           QMessageBox, QTableView, QSortFilterProxyModel,
                           QAbstractItemView, QItemSelection)
 from ui_main_window import Ui_MainWindow
-from tablemodel import TableModel
+from table_model import TableModel
+from open_dialog_widget import OpenDialog
 
 
 class MainWindow(QtGui.QMainWindow):
@@ -45,14 +46,22 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.tableView.setModel(self.table_model)
         self.ui.tableView.horizontalHeader().setStretchLastSection(True)
 
+        self.output_file = None
 
-        self.moos_data = (None, None, None) # latest
+        self.moos_data = (None, None, None, None, None, None) # latest
         self.survey_points = deque() # each element: [n, (x,y,z), 'descr']
 
         self.variance_threshold = config["variance_threshold"]
 
         # UI Signals/Slots
         self.ui.recordButton.released.connect(self.onRecordRequested)
+        self.ui.actionOpen_Log.triggered.connect(self.openLog)
+
+    @QtCore.Slot()
+    def openLog(checked):
+        dialog = OpenDialog()
+        if dialog.exec_():
+            pass
 
     @QtCore.Slot(tuple)
     def receivePosition(pos):
@@ -66,11 +75,13 @@ class MainWindow(QtGui.QMainWindow):
         _sum = _2sum = (0, 0, 0)
         n = 0
         keep_going = True
+        #FIXME this may just display the first value - variance is 0-initialized
         while keep_going:
             # Get values
             MainWindow.requestPosition()
             sleep(0.1) # let moos reply
             pos = self.moos_data[0:2]
+            dev = self.moos_data[3:5]
 
             # calculate the variance
             _mean = (0, 0, 0)
@@ -81,6 +92,8 @@ class MainWindow(QtGui.QMainWindow):
                 _2sum[i] += pos[i]**2
                 _mean[i] = _sum[i]/n
                 _var[i] = _2sum[i]/n - _mean[i]**2
+
+            self.showVariance(_var)
 
             if sum(_var) < self.variance_threshold:
                 x = _mean[0]
@@ -93,6 +106,11 @@ class MainWindow(QtGui.QMainWindow):
                     _mean[0:2], self.ui.text())
                 keep_going = False
 
+    def showVariance(self, var=(0, 0, 0)):
+        """update the variance LCD's while waiting for point to go low"""
+        self.ui.xVarianceLcd.display(var[0])
+        self.ui.yVarianceLcd.display(var[1])
+        self.ui.zVarianceLcd.display(var[2])
 
     def addEntry(self, x=None, y=None, z=None, description=None):
         if x is None and y is None and z is None and description is None:

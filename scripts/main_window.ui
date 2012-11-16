@@ -13,105 +13,11 @@
   <property name="windowTitle">
    <string>GAVLab RTK Survey</string>
   </property>
+  <property name="documentMode">
+   <bool>false</bool>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_2">
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_3">
-      <item>
-       <widget class="QLabel" name="label">
-        <property name="font">
-         <font>
-          <weight>75</weight>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string>Output File</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="outputFileLineEdit"/>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout">
-      <item>
-       <widget class="QPushButton" name="openButton">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>75</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>1677215</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="text">
-         <string>Open File</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="writeButton">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>75</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>1677215</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="text">
-         <string>Write File</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="recordButton">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>853</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="text">
-         <string>Record Point</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="clearButton">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="text">
-         <string>Clear Points</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_2">
       <item>
@@ -129,6 +35,28 @@
       </item>
       <item>
        <widget class="QLineEdit" name="descriptionLineEdit"/>
+      </item>
+      <item>
+       <widget class="QPushButton" name="recordButton">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>853</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Record Point</string>
+        </property>
+        <property name="shortcut">
+         <string>Ctrl+R</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+       </widget>
       </item>
      </layout>
     </item>
@@ -426,18 +354,75 @@
      <height>25</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuMain">
+   <widget class="QMenu" name="menuFile">
     <property name="title">
-     <string>Main</string>
+     <string>File</string>
     </property>
+    <addaction name="actionOpen_Log"/>
+    <addaction name="actionWrite"/>
     <addaction name="actionExit"/>
    </widget>
-   <addaction name="menuMain"/>
+   <widget class="QMenu" name="menuPoints">
+    <property name="title">
+     <string>Points</string>
+    </property>
+    <addaction name="actionClear_All"/>
+    <addaction name="actionManual_Entry"/>
+   </widget>
+   <widget class="QMenu" name="menuStream">
+    <property name="title">
+     <string>Stream</string>
+    </property>
+    <addaction name="actionConnect_to_MOOSDB"/>
+    <addaction name="actionRun_pAntler"/>
+    <addaction name="actionUMS"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuStream"/>
+   <addaction name="menuPoints"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionExit">
    <property name="text">
     <string>Exit</string>
+   </property>
+  </action>
+  <action name="actionOpen_Log">
+   <property name="text">
+    <string>Open Log...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="actionWrite">
+   <property name="text">
+    <string>Write...</string>
+   </property>
+  </action>
+  <action name="actionClear_All">
+   <property name="text">
+    <string>Clear All...</string>
+   </property>
+  </action>
+  <action name="actionManual_Entry">
+   <property name="text">
+    <string>Manual Entry...</string>
+   </property>
+  </action>
+  <action name="actionConnect_to_MOOSDB">
+   <property name="text">
+    <string>Connect to MOOSDB...</string>
+   </property>
+  </action>
+  <action name="actionRun_pAntler">
+   <property name="text">
+    <string>Run pAntler...</string>
+   </property>
+  </action>
+  <action name="actionUMS">
+   <property name="text">
+    <string>uMS...</string>
    </property>
   </action>
  </widget>
