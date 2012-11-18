@@ -13,9 +13,11 @@ import sys, os
 from ui_main_window import Ui_MainWindow
 
 ### Settings ###
-pkg_dir = os.path.abspath('moos_rtk_survey')
-viz_config = load(file(pkg_dir+'/cfg/survey.yaml', 'r'))
-moos_config = load(file(pkg_dir+'/cfg/moos.yaml', 'r'))
+# pkg_dir = os.path.abspath('moos_rtk_survey')
+# viz_config = load(file(pkg_dir+'/cfg/survey.yaml', 'r'))
+# moos_config = load(file(pkg_dir+'/cfg/moos.yaml', 'r'))
+viz_config = load(file('/home/rgcofield/devel/survey_ws/moos_rtk_survey/cfg/survey.yaml'))
+moos_config = load(file('/home/rgcofield/devel/survey_ws/moos_rtk_survey/cfg/moos.yaml'))
 
 
 def main():

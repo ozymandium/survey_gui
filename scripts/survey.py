@@ -10,7 +10,8 @@ from copy import deepcopy as dcp
 from PySide import QtGui, QtCore
 from PySide.QtGui import (QWidget, QTabWidget, QItemSelectionModel, 
                           QMessageBox, QTableView, QSortFilterProxyModel,
-                          QAbstractItemView, QItemSelection, QFileDialog)
+                          QAbstractItemView, QItemSelection, QFileDialog,
+                          QDialog)
 from ui_main_window import Ui_MainWindow
 from table_model import TableModel
 from manual_dialog import ManualDialog
@@ -48,7 +49,8 @@ class MainWindow(QtGui.QMainWindow):
 
         self.output_file_dialog = QFileDialog()
         self.output_file = None
-        self.manual_dialog = ManualDialog()
+        # self.manual_dialog = ManualDialog()
+        self.manual_dialog = QtGui.QDialog()
 
         self.moos_data = (None, None, None, None, None, None) # latest
         self.survey_points = deque() # each element: [n, (x,y,z), 'descr']
@@ -58,6 +60,7 @@ class MainWindow(QtGui.QMainWindow):
         # UI Signals/Slots
         self.ui.recordButton.released.connect(self.onRecordRequested)
         self.ui.actionOpen_Log.triggered.connect(self.openLog)
+        self.ui.actionManual_Entry.triggered.connect(self.addManualPoint)
 
     @QtCore.Slot()
     def openLog(self):
@@ -107,9 +110,18 @@ class MainWindow(QtGui.QMainWindow):
                     _mean[0:2], self.ui.text())
                 keep_going = False
 
-        @QtCore.Slot()
-        def addManualPoint(self):
-            self.
+    @QtCore.Slot()
+    def addManualPoint(self):
+        x, x_ok = QtGui.QInputDialog.getDouble(self.manual_dialog, "Input X Coordinate",
+                    "(ECEF) X:", 0.0, -1e9, 1e9, 1)
+        y, y_ok = QtGui.QInputDialog.getDouble(self.manual_dialog, "Input Y Coordinate",
+                    "(ECEF) Y:", 0.0, -1e9, 1e9, 1)
+        z, z_ok = QtGui.QInputDialog.getDouble(self.manual_dialog, "Input Z Coordinate",
+                    "(ECEF) Z:", 0.0, -1e9, 1e9, 1)
+        desc, desc_ok = QtGui.QInputDialog.getText(self.manual_dialog, "Input Point Description",
+                    "Description:", QtGui.QLineEdit.Normal)
+        if x_ok and y_ok and z_ok and desc_ok:
+            self.addEntry(x=z, y=y, z=z, description=desc)
 
     def showVariance(self, var=(0, 0, 0)):
         """update the variance LCD's while waiting for point to go low"""
@@ -129,19 +141,19 @@ class MainWindow(QtGui.QMainWindow):
         self.table_model.insertRows(0) # at position zero
 
         ix = self.table_model.index(0, 0, QtCore.QModelIndex())
-        self.table_model.setData(ix, point["x"], Qt.EditRole)
+        self.table_model.setData(ix, point["x"], QtCore.Qt.EditRole)
 
         ix = self.table_model.index(0, 1, QtCore.QModelIndex())
-        self.table_model.setData(ix, point["y"], Qt.EditRole)
+        self.table_model.setData(ix, point["y"], QtCore.Qt.EditRole)
 
         ix = self.table_model.index(0, 2, QtCore.QModelIndex())
-        self.table_model.setData(ix, point["z"], Qt.EditRole)
+        self.table_model.setData(ix, point["z"], QtCore.Qt.EditRole)
 
         ix = self.table_model.index(0, 3, QtCore.QModelIndex())
-        self.table_model.setData(ix, point["description"], Qt.EditRole)
+        self.table_model.setData(ix, point["description"], QtCore.Qt.EditRole)
 
         # may need some resizing
-        self.currentWidget.resizeRowToContents(ix.row())
+        # self.currentWidget.resizeRowToContents(ix.row())  ##!! AttributeError: 'MainWindow' object has no attribute 'currentWidget'
 
     def getAllData(self):
         data = []
@@ -152,7 +164,7 @@ class MainWindow(QtGui.QMainWindow):
                 data[n].append(self.table_model.data(ix))
         return data
 
-    def
+    # def
 
 
 

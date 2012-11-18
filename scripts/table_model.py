@@ -94,5 +94,5 @@ class TableModel(QtCore.QAbstractTableModel):
     def flags(self, index):
         if not index.isValid():
             return QtCore.Qt.ItemIsEnabled
-        return QtCore.Qt.ItemFlags(QAbstractTableModel.flags(self, index) |
+        return QtCore.Qt.ItemFlags(QtCore.QAbstractTableModel.flags(self, index) |
                             QtCore.Qt.ItemIsEditable)
