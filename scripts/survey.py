@@ -16,6 +16,9 @@ from ui_main_window import Ui_MainWindow
 from table_model import TableModel
 from manual_dialog import ManualDialog
 
+import sip
+sip.setapi('QString', 2)
+
 
 class MainWindow(QtGui.QMainWindow):
     """survey mainwindow class"""
@@ -59,13 +62,8 @@ class MainWindow(QtGui.QMainWindow):
 
         # UI Signals/Slots
         self.ui.recordButton.released.connect(self.onRecordRequested)
-        self.ui.actionOpen_Log.triggered.connect(self.openLog)
         self.ui.actionManual_Entry.triggered.connect(self.addManualPoint)
-
-    @QtCore.Slot()
-    def openLog(self):
-        self.output_file = open(self.output_file_dialog.getOpenFileName()[0], 'w')
-        print('log file selected: '), pp(self.output_file)
+        self.ui.actionWrite.triggered.connect(self.writeToFile)
 
     @QtCore.Slot(tuple)
     def receivePosition(self, pos):
@@ -114,14 +112,31 @@ class MainWindow(QtGui.QMainWindow):
     def addManualPoint(self):
         x, x_ok = QtGui.QInputDialog.getDouble(self.manual_dialog, "Input X Coordinate",
                     "(ECEF) X:", 0.0, -1e9, 1e9, 1)
+        if not x_ok: pass
         y, y_ok = QtGui.QInputDialog.getDouble(self.manual_dialog, "Input Y Coordinate",
                     "(ECEF) Y:", 0.0, -1e9, 1e9, 1)
+        if not y_ok: pass
         z, z_ok = QtGui.QInputDialog.getDouble(self.manual_dialog, "Input Z Coordinate",
                     "(ECEF) Z:", 0.0, -1e9, 1e9, 1)
+        if not z_ok: pass
         desc, desc_ok = QtGui.QInputDialog.getText(self.manual_dialog, "Input Point Description",
                     "Description:", QtGui.QLineEdit.Normal)
-        if x_ok and y_ok and z_ok and desc_ok:
-            self.addEntry(x=z, y=y, z=z, description=desc)
+        if not desc_ok: pass
+        self.addEntry(x=z, y=y, z=z, description=desc)
+
+    @QtCore.Slot()
+    def writeToFile(self):
+        self.output_file = open( str(self.output_file_dialog.getOpenFileName()[0]), 'w' )
+        
+        # pdb.set_trace()
+        for line in self.getAllData():
+            line = (str(line[0]), str(line[1]), str(line[2]), line[3])
+            for item in line:
+                self.output_file.write('%s\t\t\t' % item)
+            self.output_file.write('\n')
+
+        self.output_file.close()
+        
 
     def showVariance(self, var=(0, 0, 0)):
         """update the variance LCD's while waiting for point to go low"""
@@ -157,11 +172,11 @@ class MainWindow(QtGui.QMainWindow):
 
     def getAllData(self):
         data = []
-        for n in range(len(self.table_model.points)):
-            data[n] = []
-            for w in range(3):
-                ix = [self.table_model.index(n, w, QtCore.QModelIndex)]
-                data[n].append(self.table_model.data(ix))
+        for pt in range(len(self.table_model.points)):
+            data.append([])
+            for w in range(4):
+                ix = self.table_model.index(pt, w, QtCore.QModelIndex())
+                data[pt].append(self.table_model.data(ix))
         return data
 
     # def

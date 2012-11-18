@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'moos_rtk_survey/scripts/main_window.ui'
+# Form implementation generated from reading ui file 'scripts/main_window.ui'
 #
-# Created: Fri Nov 16 00:58:47 2012
+# Created: Sun Nov 18 16:42:17 2012
 #      by: pyside-uic 0.2.13 running on PySide 1.1.0
 #
 # WARNING! All changes made in this file will be lost!
@@ -13,9 +13,6 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(640, 480)
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("../../../sat_numerr_viz_ws/sat_numerr_viz/graphics/gavlab_logo.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        MainWindow.setWindowIcon(icon)
         MainWindow.setDocumentMode(False)
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
@@ -181,7 +178,6 @@ class Ui_MainWindow(object):
         self.actionRun_pAntler.setObjectName("actionRun_pAntler")
         self.actionUMS = QtGui.QAction(MainWindow)
         self.actionUMS.setObjectName("actionUMS")
-        self.menuFile.addAction(self.actionOpen_Log)
         self.menuFile.addAction(self.actionWrite)
         self.menuFile.addAction(self.actionExit)
         self.menuPoints.addAction(self.actionClear_All)
@@ -216,8 +212,10 @@ class Ui_MainWindow(object):
         self.actionOpen_Log.setText(QtGui.QApplication.translate("MainWindow", "Open Log...", None, QtGui.QApplication.UnicodeUTF8))
         self.actionOpen_Log.setShortcut(QtGui.QApplication.translate("MainWindow", "Ctrl+O", None, QtGui.QApplication.UnicodeUTF8))
         self.actionWrite.setText(QtGui.QApplication.translate("MainWindow", "Write...", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionWrite.setShortcut(QtGui.QApplication.translate("MainWindow", "Ctrl+W", None, QtGui.QApplication.UnicodeUTF8))
         self.actionClear_All.setText(QtGui.QApplication.translate("MainWindow", "Clear All...", None, QtGui.QApplication.UnicodeUTF8))
         self.actionManual_Entry.setText(QtGui.QApplication.translate("MainWindow", "Manual Entry...", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionManual_Entry.setShortcut(QtGui.QApplication.translate("MainWindow", "Ctrl+M", None, QtGui.QApplication.UnicodeUTF8))
         self.actionConnect_to_MOOSDB.setText(QtGui.QApplication.translate("MainWindow", "Connect to MOOSDB...", None, QtGui.QApplication.UnicodeUTF8))
         self.actionRun_pAntler.setText(QtGui.QApplication.translate("MainWindow", "Run pAntler...", None, QtGui.QApplication.UnicodeUTF8))
         self.actionUMS.setText(QtGui.QApplication.translate("MainWindow", "uMS...", None, QtGui.QApplication.UnicodeUTF8))

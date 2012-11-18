@@ -358,7 +358,6 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionOpen_Log"/>
     <addaction name="actionWrite"/>
     <addaction name="actionExit"/>
    </widget>
@@ -399,6 +398,9 @@
    <property name="text">
     <string>Write...</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+W</string>
+   </property>
   </action>
   <action name="actionClear_All">
    <property name="text">
@@ -408,6 +410,9 @@
   <action name="actionManual_Entry">
    <property name="text">
     <string>Manual Entry...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+M</string>
    </property>
   </action>
   <action name="actionConnect_to_MOOSDB">
