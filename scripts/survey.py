@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 import sys, os
 import fileinput
-from yaml import load
 from time import sleep
 from collections import deque
 from pprint import pprint as pp
 import pdb
 from copy import deepcopy as dcp
+
 from PySide import QtGui, QtCore
 from PySide.QtGui import (QWidget, QTabWidget, QItemSelectionModel, 
                           QMessageBox, QTableView, QSortFilterProxyModel,
@@ -20,6 +20,9 @@ from moos import MoosWidget
 import sip
 sip.setapi('QString', 2)
 
+if not config['use_moos']:
+    import rospy, roslib
+    roslib.load_manifest('survey_gui')
 
 class MainWindow(QtGui.QMainWindow):
     """survey mainwindow class"""
@@ -37,11 +40,23 @@ class MainWindow(QtGui.QMainWindow):
             self.exec_()
 
     def __init__(self, ui, config):
+
+        def setupMOOS():
+            MainWindow.viz_ip = config['ip']
+            MainWindow.viz_port = config['port']
+            self.thread = MainWindow.VizThread()
+
+            self.moos_widget = MoosWidget(config['moos'])
+            self.moos_data =  # latest
+            self.moos_data_fresh = False
+
+            self.requestPosition.connect(self.moos_widget.onPositionRequested)
+            self.moos_widget.sendPosition.connect(self.receivePosition)        
+
         QtGui.QMainWindow.__init__(self)
-        
-        MainWindow.viz_ip = config['ip']
-        MainWindow.viz_port = config['port']
-        self.thread = MainWindow.VizThread()
+
+        if config['use_moos']:
+            setupMOOS()
 
         self.ui = ui
         self.ui.setupUi(self)
@@ -57,20 +72,9 @@ class MainWindow(QtGui.QMainWindow):
 
         self.manual_dialog = QtGui.QDialog()
 
-        # Setup MOOS Widget
-        if config['use_moos']:
-            self.moos_widget = MoosWidget(config['moos'])
-            self.moos_data =  # latest
-            self.moos_data_fresh = False
-
         self.variance_threshold = config["variance_threshold"]
 
         # Signals/Slots
-        # MOOS
-        if config['use_moos']:
-            self.requestPosition.connect(self.moos_widget.onPositionRequested)
-            self.moos_widget.sendPosition.connect(self.receivePosition)        
-        # UI
         self.ui.recordButton.released.connect(self.onRecordRequested)
         self.ui.actionManual_Entry.triggered.connect(self.addManualPoint)
         self.ui.actionWrite.triggered.connect(self.writeToFile)

@@ -16,7 +16,7 @@ from ui_main_window import Ui_MainWindow
 # viz_config = load(file(pkg_dir+'/cfg/survey.yaml', 'r'))
 # moos_config = load(file(pkg_dir+'/cfg/moos.yaml', 'r'))
 viz_config = load(file('/home/rgcofield/devel/survey_ws/moos_rtk_survey/cfg/survey.yaml'))
-moos_config = load(file('/home/rgcofield/devel/survey_ws/moos_rtk_survey/cfg/moos.yaml'))
+# moos_config = load(file('/home/rgcofield/devel/survey_ws/moos_rtk_survey/cfg/moos.yaml'))
 
 
 def main():
@@ -24,7 +24,7 @@ def main():
     app = QtGui.QApplication(sys.argv[0])
     ui_mainwindow = Ui_MainWindow()
 
-    main_window = MainWindow(ui_mainwindow, viz_config, moos_config)
+    main_window = MainWindow(ui_mainwindow, viz_config)
     main_window.show()
 
     sys.exit(app.exec_())

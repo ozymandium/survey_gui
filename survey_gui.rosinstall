@@ -1,0 +1,17 @@
+-git:
+    local-name: 'survey_ws'
+    uri: 'https://github.com/GAVLab/survey_gui.git'
+    version: 'devel'
+
+- git:
+    local-name: 'serial'
+    uri: 'https://github.com/wjwwood/serial.git'
+    version: 'v1.0'
+- git:
+    local-name: 'gavlab_msgs'
+    uri: 'https://github.com/GAVLab/gavlab_msgs.git'
+    version: 'master'
+- git:
+    local-name: 'ublox'
+    uri: 'https://github.com/GAVLab/ublox.git'
+    version: 'master'

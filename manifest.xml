@@ -1,0 +1,18 @@
+<package>
+  <description brief="survey_gui">
+
+     survey_gui
+
+  </description>
+  <author>Robert Cofield</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/survey_gui</url>
+  <depend package="roscpp"/>
+  <depend package="rospy"/>
+  <depend package="serial"/>
+  <depend package="sensor_msgs"/>
+  <depend package="ublox"/>
+  <!-- <depend package="gnss_msgs"/> -->
+
+</package>
