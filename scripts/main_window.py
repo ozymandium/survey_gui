@@ -42,13 +42,14 @@ class MainWindow(QtGui.QMainWindow):
     def __init__(self, ui, config):
 
         def setupMOOS():
+            # manual threading is only necessary if reading messages from moos
+            # roslaunch automatically configures threads - ros is superior to moos
             MainWindow.viz_ip = config['ip']
             MainWindow.viz_port = config['port']
             self.thread = MainWindow.VizThread()
 
             self.moos_widget = MoosWidget(config['moos'])
-            self.moos_data =  # latest
-            self.moos_data_fresh = False
+            self.pos_data_fresh = False
 
             self.requestPosition.connect(self.moos_widget.onPositionRequested)
             self.moos_widget.sendPosition.connect(self.receivePosition)        
@@ -72,6 +73,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.manual_dialog = QtGui.QDialog()
 
+        self.pos_data =  (0, 0, 0, 0, 0, 0) # latest
         self.variance_threshold = config["variance_threshold"]
 
         # Signals/Slots
@@ -82,8 +84,11 @@ class MainWindow(QtGui.QMainWindow):
     @QtCore.Slot(tuple)
     def receivePosition(self, pos):
         """connected to moos widget's position sender"""
-        self.moos_data = pos
-        self.moos_data_fresh = True
+        self.pos_data = pos
+        self.pos_data_fresh = True
+
+    def positionCallback(self, pos):
+        """callback for ROS subscriber"""
 
     @QtCore.Slot()
     def onRecordRequested(self):
@@ -95,12 +100,12 @@ class MainWindow(QtGui.QMainWindow):
         #FIXME this may just display the first value - variance is 0-initialized
         while keep_going:
             # Get values
-            self.moos_data_fresh = False
+            self.pos_data_fresh = False
             MainWindow.requestPosition()
-            while not self.moos_data_fresh:
+            while not self.pos_data_fresh:
                 sleep(0.01) # let moos reply
-            pos = self.moos_data[0:2]
-            dev = self.moos_data[3:5]
+            pos = self.pos_data[0:2]
+            dev = self.pos_data[3:5]
 
             # calculate the variance
             _mean = (0, 0, 0)

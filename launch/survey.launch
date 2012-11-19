@@ -1,0 +1,8 @@
+<launch>
+
+    <node pkg="survey_gui" type="survey_node.py" name="survey" 
+        required="true" output="screen"/>
+
+
+
+</launch>
