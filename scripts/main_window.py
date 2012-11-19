@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 import sys, os
 import fileinput
-from time import sleep
-from collections import deque
+from time import *
 from pprint import pprint as pp
 import pdb
 from copy import deepcopy as dcp
@@ -15,14 +14,10 @@ from PySide.QtGui import (QWidget, QTabWidget, QItemSelectionModel,
 from ui_main_window import Ui_MainWindow
 
 from table_model import TableModel
-from moos import MoosWidget
+from moos_comm import MoosWidget
 
 import sip
 sip.setapi('QString', 2)
-
-if not config['use_moos']:
-    import rospy, roslib
-    roslib.load_manifest('survey_gui')
 
 class MainWindow(QtGui.QMainWindow):
     """survey mainwindow class"""
@@ -44,6 +39,7 @@ class MainWindow(QtGui.QMainWindow):
         def setupMOOS():
             # manual threading is only necessary if reading messages from moos
             # roslaunch automatically configures threads - ros is superior to moos
+            self.comm = 'moos'
             MainWindow.viz_ip = config['ip']
             MainWindow.viz_port = config['port']
             self.thread = MainWindow.VizThread()
@@ -52,11 +48,20 @@ class MainWindow(QtGui.QMainWindow):
             self.pos_data_fresh = False
 
             self.requestPosition.connect(self.moos_widget.onPositionRequested)
-            self.moos_widget.sendPosition.connect(self.receivePosition)        
+            self.moos_widget.sendPosition.connect(self.receivePosition)
+
+        def setupROS():
+            self.comm = 'ros'
+            pass    
 
         QtGui.QMainWindow.__init__(self)
 
-        if config['use_moos']:
+        # Determine Comm arch
+        try:
+            import rospy, roslib
+            roslib.load_manifest('survey_gui')
+            setupROS()
+        except:
             setupMOOS()
 
         self.ui = ui
@@ -152,7 +157,7 @@ class MainWindow(QtGui.QMainWindow):
         self.output_file = open( str(self.output_file_dialog.getOpenFileName()[0]), 'w' )
 
         # Header
-        self.output_file.write('## GAVLab Survey - Recorded %s' % time.asctime(time.localtime(time.time())))
+        self.output_file.write('## GAVLab Survey - Recorded %s' % asctime(localtime(time())))
 
         for line in self.getAllData():
             line = (str(line[0]), str(line[1]), str(line[2]), line[3])
