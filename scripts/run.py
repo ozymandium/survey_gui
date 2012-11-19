@@ -6,7 +6,6 @@ Master runner file.
 Execute from within the scripts/ folder
 """
 from survey import MainWindow
-from moos import MoosWidget
 from yaml import load
 from PySide import QtGui
 import sys, os
@@ -25,17 +24,8 @@ def main():
     app = QtGui.QApplication(sys.argv[0])
     ui_mainwindow = Ui_MainWindow()
 
-    #Setup Moos App
-    moos_widget = MoosWidget(moos_config)
-
-    #Setup primary app, feed it the main window and configuration.
-    #Bring up mainwindow and enter main loop
-    main_window = MainWindow(ui_mainwindow, viz_config)
+    main_window = MainWindow(ui_mainwindow, viz_config, moos_config)
     main_window.show()
-
-    # Connect Signals/Slots
-    main_window.requestPosition.connect(moos_widget.onPositionRequested)
-    moos_widget.sendPosition.connect(main_window.receivePosition)
 
     sys.exit(app.exec_())
 

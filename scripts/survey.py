@@ -13,8 +13,9 @@ from PySide.QtGui import (QWidget, QTabWidget, QItemSelectionModel,
                           QAbstractItemView, QItemSelection, QFileDialog,
                           QDialog)
 from ui_main_window import Ui_MainWindow
+
 from table_model import TableModel
-from manual_dialog import ManualDialog
+from moos import MoosWidget
 
 import sip
 sip.setapi('QString', 2)
@@ -50,17 +51,26 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.tableView.setModel(self.table_model)
         self.ui.tableView.horizontalHeader().setStretchLastSection(True)
 
+        # output
         self.output_file_dialog = QFileDialog()
         self.output_file = None
-        # self.manual_dialog = ManualDialog()
+
         self.manual_dialog = QtGui.QDialog()
 
-        self.moos_data = (None, None, None, None, None, None) # latest
-        self.survey_points = deque() # each element: [n, (x,y,z), 'descr']
+        # Setup MOOS Widget
+        if config['use_moos']:
+            self.moos_widget = MoosWidget(config['moos'])
+            self.moos_data =  # latest
+            self.moos_data_fresh = False
 
         self.variance_threshold = config["variance_threshold"]
 
-        # UI Signals/Slots
+        # Signals/Slots
+        # MOOS
+        if config['use_moos']:
+            self.requestPosition.connect(self.moos_widget.onPositionRequested)
+            self.moos_widget.sendPosition.connect(self.receivePosition)        
+        # UI
         self.ui.recordButton.released.connect(self.onRecordRequested)
         self.ui.actionManual_Entry.triggered.connect(self.addManualPoint)
         self.ui.actionWrite.triggered.connect(self.writeToFile)
@@ -69,6 +79,7 @@ class MainWindow(QtGui.QMainWindow):
     def receivePosition(self, pos):
         """connected to moos widget's position sender"""
         self.moos_data = pos
+        self.moos_data_fresh = True
 
     @QtCore.Slot()
     def onRecordRequested(self):
@@ -80,8 +91,10 @@ class MainWindow(QtGui.QMainWindow):
         #FIXME this may just display the first value - variance is 0-initialized
         while keep_going:
             # Get values
+            self.moos_data_fresh = False
             MainWindow.requestPosition()
-            sleep(0.1) # let moos reply
+            while not self.moos_data_fresh:
+                sleep(0.01) # let moos reply
             pos = self.moos_data[0:2]
             dev = self.moos_data[3:5]
 
@@ -112,23 +125,26 @@ class MainWindow(QtGui.QMainWindow):
     def addManualPoint(self):
         x, x_ok = QtGui.QInputDialog.getDouble(self.manual_dialog, "Input X Coordinate",
                     "(ECEF) X:", 0.0, -1e9, 1e9, 1)
-        if not x_ok: pass
+        if not x_ok: return
         y, y_ok = QtGui.QInputDialog.getDouble(self.manual_dialog, "Input Y Coordinate",
                     "(ECEF) Y:", 0.0, -1e9, 1e9, 1)
-        if not y_ok: pass
+        if not y_ok: return
         z, z_ok = QtGui.QInputDialog.getDouble(self.manual_dialog, "Input Z Coordinate",
                     "(ECEF) Z:", 0.0, -1e9, 1e9, 1)
-        if not z_ok: pass
+        if not z_ok: return
         desc, desc_ok = QtGui.QInputDialog.getText(self.manual_dialog, "Input Point Description",
                     "Description:", QtGui.QLineEdit.Normal)
-        if not desc_ok: pass
+        if not desc_ok: return
+
         self.addEntry(x=z, y=y, z=z, description=desc)
 
     @QtCore.Slot()
     def writeToFile(self):
         self.output_file = open( str(self.output_file_dialog.getOpenFileName()[0]), 'w' )
-        
-        # pdb.set_trace()
+
+        # Header
+        self.output_file.write('## GAVLab Survey - Recorded %s' % time.asctime(time.localtime(time.time())))
+
         for line in self.getAllData():
             line = (str(line[0]), str(line[1]), str(line[2]), line[3])
             for item in line:
@@ -136,6 +152,7 @@ class MainWindow(QtGui.QMainWindow):
             self.output_file.write('\n')
 
         self.output_file.close()
+        print('Output Log File Written!')
         
 
     def showVariance(self, var=(0, 0, 0)):

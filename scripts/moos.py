@@ -117,6 +117,7 @@ class MoosWidget(QtGui.QWidget):
 
             if cull:
                 del self.partial_positions[t]
+                break # only one can be completed @ a time
 
     @QtCore.Slot()
     def onPositionRequested():
