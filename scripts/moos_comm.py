@@ -3,12 +3,27 @@
 Implementation of the pyMOOS MOOSCommClient
 """
 import sys
-from pymoos.MOOSCommClient import MOOSCommClient
 from pprint import pprint as pp
-from PySide import QtGui
-from PySide import QtCore
 from time import sleep
+from time import time as time_now
 import pdb
+import warnings
+
+from pymoos.MOOSCommClient import MOOSCommClient
+
+from PySide import QtGui, QtCore
+
+
+class MOOSConnectionWarning(Warning):
+    """Raise when MOOS Connection is not available or fruitful"""
+    def __init__(self, msg):
+        self.msg = msg
+
+
+class MOOSPositionWarning(Warning):
+    """Raised when position received from MOOS is not valid"""
+    def __init__(self, msg):
+        self.msg = msg
 
 
 class MoosWidget(QtGui.QWidget):
@@ -48,6 +63,7 @@ class MoosWidget(QtGui.QWidget):
 
         self.partial_positions = {}
         self.current_position = {}
+        self.current_position_time = None
         for i in self.desired_variables:
             self.current_position[i] = None
         self.num_var = len(self.desired_variables)
@@ -64,7 +80,7 @@ class MoosWidget(QtGui.QWidget):
 
     def onConnect(self):
         """MOOS callback - required in every MOOS app's class definition"""
-        print('In MoosWidget.onConnect :: waiting for mail..')
+        print('MoosWidget: onConnect: waiting for mail..')
         for var in self.desired_variables:
             self.moos_client.Register(var)
         return
@@ -72,6 +88,7 @@ class MoosWidget(QtGui.QWidget):
     def onMail(self):
         """MOOS callback - required in every MOOS app's class definition"""
         # print('\n--- In MoosWidget.onMail :: Retrieving inbox contents ---')
+        # print('MoosWidget: onMail: Fetching recent mail')
         for message in self.moos_client.FetchRecentMail():
             self.unpackMsg(message)
         return True
@@ -102,7 +119,7 @@ class MoosWidget(QtGui.QWidget):
         # print('\nIn handle_msg: \t%s' % msg['name'])
         if time not in self.partial_positions:
             self.partial_positions[time] = {}
-        
+    
         self.partial_positions[time][name] = valu
 
         ts = sorted(self.partial_positions.iterkeys()) # from low to high
@@ -110,6 +127,7 @@ class MoosWidget(QtGui.QWidget):
             cull = False
             if len(self.partial_positions[t]) == self.num_var: # update
                 self.current_position = self.partial_positions[t]
+                self.current_position_time = time_now()
                 cull = True
 
             if time - t > self.time_buffer:
@@ -122,8 +140,19 @@ class MoosWidget(QtGui.QWidget):
     @QtCore.Slot(bool)
     def onPositionRequested(self):
         """survey instance wants a position, trigger send position emit"""
+        if not all(self.current_position):
+            raise MOOSConnectionWarning('MoosWidget: onPositionRequested: Nones in current position')
         out = (self.current_position[p] for p in self.desired_variables)
-        self.sendPosition.emit(out)
+        
+        # This used up the iterator?
+        # if not all(out): # None indicates nothing has gotten through since init
+            # MOOSPositionWarning('MoosWidget: onPositionRequested: current position not yet populated')
+        if time_now() - self.current_position_time > self.time_buffer:
+            MOOSPositionWarning('MoosWidget: onPositionRequested: Time since last update too old - Disconnected?')
+        else:
+            self.sendPosition.emit(out)
+        # print('MoosWidget: Emitted Slot sendPosition')
+
 
 ################################################################################
 if __name__ == '__main__':

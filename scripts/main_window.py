@@ -18,6 +18,7 @@ from table_model import TableModel
 # import sip
 # sip.setapi('QString', 2)
 
+# TODO  make length of position data a communicated/coordinated value
 
 class MainWindow(QtGui.QMainWindow, QtCore.QObject):
     """survey mainwindow class"""
@@ -37,9 +38,10 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
             socket.connectToHost(MainWindow.viz_ip, MainWindow.viz_port)
             self.exec_()
 
-    def __init__(self, ui, config, parent=None):
+    def __init__(self, app, ui, config, parent=None):
         print('\n---------- GAVLab RTK Survey ----------')
         super(MainWindow, self).__init__(parent)
+        self.app = app # reference to the Qt Application
         
         def setupMOOS():
             # manual threading is only necessary if reading messages from moos
@@ -50,7 +52,6 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
             self.thread = MainWindow.VizThread()
 
             self.moos_widget = MoosWidget(config['moos'])
-            self.pos_data_fresh = False
 
             self.requestPosition.connect(self.moos_widget.onPositionRequested)
             self.moos_widget.sendPosition.connect(self.receivePosition)
@@ -67,7 +68,7 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
             roslib.load_manifest('survey_gui')
             setupROS()
         elif config['moos']:
-            from moos_comm import MoosWidget
+            from moos_comm import MoosWidget, MOOSPositionWarning, MOOSConnectionWarning
             setupMOOS()
         else:
             raise Exception('Need a config file with comm architecture')
@@ -76,7 +77,6 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
         
         self.ui = ui
         self.ui.setupUi(self)
-
 
         # Table
         self.table_model = TableModel()
@@ -89,53 +89,69 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
 
         self.manual_dialog = QtGui.QDialog()
 
-        self.pos_data =  [0, 0, 0, 0, 0, 0] # latest
+        self.pos_data =  [None]*6 # latest
+        self.pos_data_good = False
         self.variance_threshold = config["variance_threshold"]
 
         # Signals/Slots
+        self.ui.actionExit.triggered.connect(self.app.closeAllWindows)
         self.ui.recordButton.released.connect(self.onRecordRequested)
         self.ui.actionManual_Entry.triggered.connect(self.addManualPoint)
         self.ui.actionWrite.triggered.connect(self.writeToFile)
 
+    ############################################################################
+    #####  Signals & Slots Stuff  ##############################################
+    ############################################################################
+
     @QtCore.Slot(tuple)
     def receivePosition(self, pos):
         """connected to moos widget's position sender"""
-        self.pos_data = pos
-        self.pos_data_fresh = True
+        ## TODO make indexing better here (check length of pos with length of pos_data)
+        n = 0
+        while True:
+            print('MainWindow: receivePosition: iterating through...')
+            try: 
+                i = pos.next()
+            except StopIteration:
+                print('MainWindow: receivePosition: reached end of pos')
+                break
 
-    def positionCallback(self, pos):
-        """callback for ROS subscriber"""
-        pass
+            if not i:
+                raise MOOSPositionWarning('MainWindow: receivePosition: got a None value')
+                break
+            
+            self.pos_data[n] = pos.next()
+            self.pos_data_good = True
+            print('MainWindow: receivePosition position successfully received')
+            n += 1
 
     @QtCore.Slot()
     def onRecordRequested(self):
         """When the record button is pressed, listens to moos until good 
         position acquired for write"""
         print('Record requested')
-        _sum = _2sum = (0, 0, 0)
+        _sum = _2sum = [0.0, 0.0, 0.0]
         n = 0
-        keep_going = True
-        #FIXME this may just display the first value - variance is 0-initialized
-        while keep_going:
+        keep_averaging = True
+        while keep_averaging:
             # Get values
-            self.pos_data_fresh = False
-            self.requestPosition.emit()
-            while not self.pos_data_fresh:
-                sleep(0.01) # let moos reply
-            pos = self.pos_data[0:2]
-            dev = self.pos_data[3:5]
+            self.pos_data_good = False
+            while not self.pos_data_good:
+                print('\nMainWindow: onRecordRequested: pos_data_good False')
+                self.requestPosition.emit()
+                sleep(0.1)
 
             # calculate the variance
-            _mean = (0, 0, 0)
-            _var = (0, 0, 0)
+            _mean = [0.0, 0.0, 0.0]
+            _var = [0.0, 0.0, 0.0]
             n += 1
             for i in range(3):
-                _sum[i] += pos[i]
-                _2sum[i] += pos[i]**2
+                _sum[i] += self.pos_data[i]
+                _2sum[i] += self.pos_data[i]**2
                 _mean[i] = _sum[i]/n
                 _var[i] = _2sum[i]/n - _mean[i]**2
 
-            self.showVariance(_var)
+            self.showVariance(var=_var)
 
             if sum(_var) < self.variance_threshold:
                 x = _mean[0]
@@ -144,9 +160,8 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
                 description = self.ui.descriptionLineEdit.text()
                 self.addEntry(x=x, y=y, z=z, description=description)
 
-                print('Survey Point Added: ( %f , %f , %f )  %s' % \
-                    _mean[0:2], self.ui.text())
-                keep_going = False
+                print('Survey Point Added: ( %f , %f , %f )  %s' % (x, y, z, description))
+                keep_averaging = False
 
     @QtCore.Slot()
     def addManualPoint(self):
@@ -180,10 +195,17 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
 
         self.output_file.close()
         print('Output Log File Written!')
-        
+
+    # @QtCore.Slot()
+    # def onExitRequested(self):
+
+    ############################################################################
+    #####  Helper functions ####################################################
+    ############################################################################
 
     def showVariance(self, var=(0, 0, 0)):
         """update the variance LCD's while waiting for point to go low"""
+        print('MainWindow: showVariance')
         self.ui.xVarianceLcd.display(var[0])
         self.ui.yVarianceLcd.display(var[1])
         self.ui.zVarianceLcd.display(var[2])
@@ -222,10 +244,6 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
                 ix = self.table_model.index(pt, w, QtCore.QModelIndex())
                 data[pt].append(self.table_model.data(ix))
         return data
-
-    # def
-
-
 
 
 if __name__ == '__main__':

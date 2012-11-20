@@ -20,7 +20,7 @@ def main():
     app = QtGui.QApplication(sys.argv[0])
     ui_mainwindow = Ui_MainWindow()
 
-    main_window = MainWindow(ui_mainwindow, viz_config)
+    main_window = MainWindow(app, ui_mainwindow, viz_config)
     main_window.show()
 
     sys.exit(app.exec_())
