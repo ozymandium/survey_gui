@@ -140,8 +140,9 @@ class MoosWidget(QtGui.QWidget):
     @QtCore.Slot(bool)
     def onPositionRequested(self):
         """survey instance wants a position, trigger send position emit"""
-        if not all(self.current_position):
+        if not (all(self.current_position) and self.current_position_time):
             raise MOOSConnectionWarning('MoosWidget: onPositionRequested: Nones in current position')
+            pass
         out = (self.current_position[p] for p in self.desired_variables)
         
         # This used up the iterator?

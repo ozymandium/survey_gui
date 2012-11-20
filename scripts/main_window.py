@@ -121,9 +121,11 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
                 break
             
             self.pos_data[n] = pos.next()
-            self.pos_data_good = True
             print('MainWindow: receivePosition position successfully received')
             n += 1
+        
+        if all(self.pos_data):
+            self.pos_data_good = True
 
     @QtCore.Slot()
     def onRecordRequested(self):
@@ -136,10 +138,11 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
         while keep_averaging:
             # Get values
             self.pos_data_good = False
-            while not self.pos_data_good:
+            self.requestPosition.emit()
+            sleep(0.1)
+            if not self.pos_data_good:
                 print('\nMainWindow: onRecordRequested: pos_data_good False')
-                self.requestPosition.emit()
-                sleep(0.1)
+                pass
 
             # calculate the variance
             _mean = [0.0, 0.0, 0.0]
@@ -205,7 +208,7 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
 
     def showVariance(self, var=(0, 0, 0)):
         """update the variance LCD's while waiting for point to go low"""
-        print('MainWindow: showVariance')
+        # print('MainWindow: showVariance')
         self.ui.xVarianceLcd.display(var[0])
         self.ui.yVarianceLcd.display(var[1])
         self.ui.zVarianceLcd.display(var[2])
