@@ -27,9 +27,6 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
     viz_ip = '127.0.0.1'
     viz_port = 9001
 
-    class QtComm(QtCore.QObject):
-        requestPosition = QtCore.Signal()
-
     class VizThread(QtCore.QThread):
         """Thread for the viz MainWindow"""
         def run():
@@ -47,8 +44,11 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
             # manual threading is only necessary if reading messages from moos
             # roslaunch automatically configures threads - ros is superior to moos
             self.comm_arch = 'moos'
-            MainWindow.viz_ip = config['ip']
-            MainWindow.viz_port = config['port']
+
+            try: 
+                MainWindow.viz_ip = config['ip']
+                MainWindow.viz_port = config['port']
+            except: pass
             self.thread = MainWindow.VizThread()
 
             self.moos_widget = MoosWidget(config['moos'])
@@ -72,9 +72,7 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
             setupMOOS()
         else:
             raise Exception('Need a config file with comm architecture')
-
-        self.qt_comm = MainWindow.QtComm()
-        
+      
         self.ui = ui
         self.ui.setupUi(self)
 
@@ -86,6 +84,8 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
         # output
         self.output_file_dialog = QFileDialog()
         self.output_file = None
+        self.header = '## GAVLab Survey - Recorded %s\n' + \
+                      '## All data in ECEF (m): X Y Z Description\n'
 
         self.manual_dialog = QtGui.QDialog()
 
@@ -95,7 +95,7 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
 
         # Signals/Slots
         self.ui.actionExit.triggered.connect(self.app.closeAllWindows)
-        self.ui.recordButton.released.connect(self.onRecordRequested)
+        self.ui.recordButton.clicked.connect(self.onRecordRequested)
         self.ui.actionManual_Entry.triggered.connect(self.addManualPoint)
         self.ui.actionWrite.triggered.connect(self.writeToFile)
 
@@ -117,21 +117,27 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
                 break
 
             if not i:
-                raise MOOSPositionWarning('MainWindow: receivePosition: got a None value')
+                MOOSPositionWarning('MainWindow: receivePosition: got a None value')
                 break
             
             self.pos_data[n] = pos.next()
             print('MainWindow: receivePosition position successfully received')
             n += 1
         
-        if all(self.pos_data):
+        if all(self.pos_data != None):
             self.pos_data_good = True
 
     @QtCore.Slot()
     def onRecordRequested(self):
         """When the record button is pressed, listens to moos until good 
         position acquired for write"""
-        print('Record requested')
+        if not self.ui.recordButton.isChecked():
+            pass
+        else:
+            # stop the recording process - user has unchecked the button
+            pass
+
+        print('\nRecord requested')
         _sum = _2sum = [0.0, 0.0, 0.0]
         n = 0
         keep_averaging = True
@@ -140,10 +146,11 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
             self.pos_data_good = False
             self.requestPosition.emit()
             sleep(0.1)
-            if not self.pos_data_good:
-                print('\nMainWindow: onRecordRequested: pos_data_good False')
+            if (not self.pos_data_good) or (not all(self.pos_data)):
+                print('MainWindow: onRecordRequested: waiting for good data...')
                 pass
 
+            print('\nMainWindow: onRecordRequested: using this position list --'); pp(self.pos_data)
             # calculate the variance
             _mean = [0.0, 0.0, 0.0]
             _var = [0.0, 0.0, 0.0]
@@ -154,7 +161,7 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
                 _mean[i] = _sum[i]/n
                 _var[i] = _2sum[i]/n - _mean[i]**2
 
-            self.showVariance(var=_var)
+            self.updateLCD(var=_var, stddev=self.pos_data[3:6])
 
             if sum(_var) < self.variance_threshold:
                 x = _mean[0]
@@ -165,6 +172,7 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
 
                 print('Survey Point Added: ( %f , %f , %f )  %s' % (x, y, z, description))
                 keep_averaging = False
+                self.ui.recordButton.setChecked(False)
 
     @QtCore.Slot()
     def addManualPoint(self):
@@ -188,12 +196,12 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
         self.output_file = open( str(self.output_file_dialog.getOpenFileName()[0]), 'w' )
 
         # Header
-        self.output_file.write('## GAVLab Survey - Recorded %s' % asctime(localtime(time())))
+        self.output_file.write(self.header % asctime(localtime(time())))
 
         for line in self.getAllData():
             line = (str(line[0]), str(line[1]), str(line[2]), line[3])
             for item in line:
-                self.output_file.write('%s\t\t\t' % item)
+                self.output_file.write('%s\t\t' % item)
             self.output_file.write('\n')
 
         self.output_file.close()
@@ -206,12 +214,16 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
     #####  Helper functions ####################################################
     ############################################################################
 
-    def showVariance(self, var=(0, 0, 0)):
+    def updateLCD(self, var=(0, 0, 0), stddev=(0, 0, 0)):
         """update the variance LCD's while waiting for point to go low"""
         # print('MainWindow: showVariance')
         self.ui.xVarianceLcd.display(var[0])
         self.ui.yVarianceLcd.display(var[1])
         self.ui.zVarianceLcd.display(var[2])
+
+        self.ui.xStdDevLcd.display(stddev[0])
+        self.ui.yStdDevLcd.display(stddev[1])
+        self.ui.zStdDevLcd.display(stddev[2])
 
     def addEntry(self, x=None, y=None, z=None, description=None):
         if x is None and y is None and z is None and description is None:

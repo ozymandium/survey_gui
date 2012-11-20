@@ -46,9 +46,10 @@ class MoosWidget(QtGui.QWidget):
     def __init__(self, config, parent=None):
         QtGui.QWidget.__init__(self, parent)
 
-        MoosWidget.moosdb_ip = config['ip']
-        MoosWidget.moosdb_port = config['port']
-
+        try:
+            MoosWidget.moosdb_ip = config['ip']
+            MoosWidget.moosdb_port = config['port']
+        except: pass
         self.thread = MoosWidget.MoosThread()
 
         self.moos_client = MOOSCommClient()
@@ -60,6 +61,10 @@ class MoosWidget(QtGui.QWidget):
         self.time_buffer = config["time_buffer"]
         self.desired_variables = config['desired_variables']
         self.sensor = config['sensor']
+        print('MoosWidget will subscribe to Sensor: %s' % self.sensor)
+        print('MoosWidget will subscribe to Variables:'); 
+        for dv in self.desired_variables:
+            print('\t%s'%dv) 
 
         self.partial_positions = {}
         self.current_position = {}
@@ -80,7 +85,7 @@ class MoosWidget(QtGui.QWidget):
 
     def onConnect(self):
         """MOOS callback - required in every MOOS app's class definition"""
-        print('MoosWidget: onConnect: waiting for mail..')
+        # print('MoosWidget: onConnect: waiting for mail..')
         for var in self.desired_variables:
             self.moos_client.Register(var)
         return
@@ -94,25 +99,25 @@ class MoosWidget(QtGui.QWidget):
         return True
 
     def unpackMsg(self, msg):
-            """parse moos messages. put into dictionary
-            handles conversion of any strings
-            """
-            # print('\nIn unpack_msg: \t%s' % msg.GetKey())
-            time = round(msg.GetTime(), 3)
-            name = msg.GetKey() # 'z_____' String
-            
-            if msg.GetSource() != self.sensor:
-                raise Warning('QtMOOS Receiving messages from undesired sensor')
-                return
-            
-            if msg.IsDouble():
-                var_type = 'double'
-                valu = msg.GetDouble()
-            elif msg.IsString():
-                raise Warning('Strings not supported')
-                return
-            
-            self.handleMsg(time, name, valu)
+        """parse moos messages. put into dictionary
+        handles conversion of any strings
+        """
+        # print('\nIn unpack_msg: \t%s' % msg.GetKey())
+        time = round(msg.GetTime(), 3)
+        name = msg.GetKey() # 'z_____' String
+        
+        if msg.GetSource() != self.sensor:
+            Warning('QtMOOS Receiving messages from undesired sensor')
+            return
+        
+        if msg.IsDouble():
+            var_type = 'double'
+            valu = msg.GetDouble()
+        elif msg.IsString():
+            Warning('Strings not supported')
+            return
+        
+        self.handleMsg(time, name, valu)
 
     def handleMsg(self, time, name, valu):
         """ update the current position when possible """
@@ -137,20 +142,18 @@ class MoosWidget(QtGui.QWidget):
                 del self.partial_positions[t]
                 break # only one can be completed @ a time
 
-    @QtCore.Slot(bool)
+    @QtCore.Slot()
     def onPositionRequested(self):
         """survey instance wants a position, trigger send position emit"""
         if not (all(self.current_position) and self.current_position_time):
-            raise MOOSConnectionWarning('MoosWidget: onPositionRequested: Nones in current position')
+            MOOSConnectionWarning('MoosWidget: onPositionRequested: Nones in current position')
             pass
-        out = (self.current_position[p] for p in self.desired_variables)
-        
-        # This used up the iterator?
-        # if not all(out): # None indicates nothing has gotten through since init
-            # MOOSPositionWarning('MoosWidget: onPositionRequested: current position not yet populated')
-        if time_now() - self.current_position_time > self.time_buffer:
+        elif time_now() - self.current_position_time > self.time_buffer:
             MOOSPositionWarning('MoosWidget: onPositionRequested: Time since last update too old - Disconnected?')
+            pass
         else:
+            print('\nMoosWidget: onPositionRequested: current_position is --'); pp(self.current_position)
+            out = (self.current_position[p] for p in self.desired_variables)
             self.sendPosition.emit(out)
         # print('MoosWidget: Emitted Slot sendPosition')
 
