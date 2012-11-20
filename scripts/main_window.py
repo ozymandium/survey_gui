@@ -11,20 +11,23 @@ from PySide.QtGui import (QWidget, QTabWidget, QItemSelectionModel,
                           QMessageBox, QTableView, QSortFilterProxyModel,
                           QAbstractItemView, QItemSelection, QFileDialog,
                           QDialog)
+
 from ui_main_window import Ui_MainWindow
-
 from table_model import TableModel
-from moos_comm import MoosWidget
 
-import sip
-sip.setapi('QString', 2)
+# import sip
+# sip.setapi('QString', 2)
 
-class MainWindow(QtGui.QMainWindow):
+
+class MainWindow(QtGui.QMainWindow, QtCore.QObject):
     """survey mainwindow class"""
     requestPosition = QtCore.Signal()
 
     viz_ip = '127.0.0.1'
     viz_port = 9001
+
+    class QtComm(QtCore.QObject):
+        requestPosition = QtCore.Signal()
 
     class VizThread(QtCore.QThread):
         """Thread for the viz MainWindow"""
@@ -34,12 +37,14 @@ class MainWindow(QtGui.QMainWindow):
             socket.connectToHost(MainWindow.viz_ip, MainWindow.viz_port)
             self.exec_()
 
-    def __init__(self, ui, config):
-
+    def __init__(self, ui, config, parent=None):
+        print('\n---------- GAVLab RTK Survey ----------')
+        super(MainWindow, self).__init__(parent)
+        
         def setupMOOS():
             # manual threading is only necessary if reading messages from moos
             # roslaunch automatically configures threads - ros is superior to moos
-            self.comm = 'moos'
+            self.comm_arch = 'moos'
             MainWindow.viz_ip = config['ip']
             MainWindow.viz_port = config['port']
             self.thread = MainWindow.VizThread()
@@ -49,23 +54,29 @@ class MainWindow(QtGui.QMainWindow):
 
             self.requestPosition.connect(self.moos_widget.onPositionRequested)
             self.moos_widget.sendPosition.connect(self.receivePosition)
+            print('MOOS setup')
 
         def setupROS():
-            self.comm = 'ros'
-            pass    
-
-        QtGui.QMainWindow.__init__(self)
+            self.comm_arch = 'ros'
+            # ...
+            print('ROS setup')
 
         # Determine Comm arch
-        try:
+        if config['ros']:
             import rospy, roslib
             roslib.load_manifest('survey_gui')
             setupROS()
-        except:
+        elif config['moos']:
+            from moos_comm import MoosWidget
             setupMOOS()
+        else:
+            raise Exception('Need a config file with comm architecture')
 
+        self.qt_comm = MainWindow.QtComm()
+        
         self.ui = ui
         self.ui.setupUi(self)
+
 
         # Table
         self.table_model = TableModel()
@@ -78,7 +89,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.manual_dialog = QtGui.QDialog()
 
-        self.pos_data =  (0, 0, 0, 0, 0, 0) # latest
+        self.pos_data =  [0, 0, 0, 0, 0, 0] # latest
         self.variance_threshold = config["variance_threshold"]
 
         # Signals/Slots
@@ -94,11 +105,13 @@ class MainWindow(QtGui.QMainWindow):
 
     def positionCallback(self, pos):
         """callback for ROS subscriber"""
+        pass
 
     @QtCore.Slot()
     def onRecordRequested(self):
         """When the record button is pressed, listens to moos until good 
         position acquired for write"""
+        print('Record requested')
         _sum = _2sum = (0, 0, 0)
         n = 0
         keep_going = True
@@ -106,7 +119,7 @@ class MainWindow(QtGui.QMainWindow):
         while keep_going:
             # Get values
             self.pos_data_fresh = False
-            MainWindow.requestPosition()
+            self.requestPosition.emit()
             while not self.pos_data_fresh:
                 sleep(0.01) # let moos reply
             pos = self.pos_data[0:2]

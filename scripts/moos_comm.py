@@ -56,7 +56,7 @@ class MoosWidget(QtGui.QWidget):
         for x in range(30):
             sleep(0.1)
             if self.moos_client.IsConnected():
-                print("\nConnected to MOOSDB")
+                print("Connected to MOOSDB")
                 break
         if not self.moos_client.IsConnected():
             print("MOOSCommClient Error:: Failed to Connect to MOOSDB")
@@ -119,11 +119,11 @@ class MoosWidget(QtGui.QWidget):
                 del self.partial_positions[t]
                 break # only one can be completed @ a time
 
-    @QtCore.Slot()
-    def onPositionRequested():
+    @QtCore.Slot(bool)
+    def onPositionRequested(self):
         """survey instance wants a position, trigger send position emit"""
         out = (self.current_position[p] for p in self.desired_variables)
-        MoosWidget.sendPosition.emit(out)
+        self.sendPosition.emit(out)
 
 ################################################################################
 if __name__ == '__main__':

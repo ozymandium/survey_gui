@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'scripts/main_window.ui'
 #
-# Created: Sun Nov 18 16:42:17 2012
+# Created: Mon Nov 19 00:35:56 2012
 #      by: pyside-uic 0.2.13 running on PySide 1.1.0
 #
 # WARNING! All changes made in this file will be lost!
@@ -31,7 +31,7 @@ class Ui_MainWindow(object):
         self.descriptionLineEdit.setObjectName("descriptionLineEdit")
         self.horizontalLayout_2.addWidget(self.descriptionLineEdit)
         self.recordButton = QtGui.QPushButton(self.centralwidget)
-        self.recordButton.setEnabled(False)
+        self.recordButton.setEnabled(True)
         self.recordButton.setMaximumSize(QtCore.QSize(853, 16777215))
         self.recordButton.setCheckable(True)
         self.recordButton.setObjectName("recordButton")
