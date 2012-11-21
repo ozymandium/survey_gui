@@ -14,6 +14,24 @@ from pymoos.MOOSCommClient import MOOSCommClient
 from PySide import QtGui, QtCore
 
 
+class MOOSCommClient_(MOOSCommClient):
+    desired_variables = []
+    unpackCallback = None
+
+    def onConnectCallBack(self):
+        try:
+            for var in self.desired_variables:
+                self.Register(var)
+        except: # Empty
+            pass
+        return True
+
+    def onMailCallBack(self):
+        messages = self.FetchRecentMail()
+        for message in messages:
+            self.unpackCallback(message)
+
+
 class MoosWidget(QtGui.QWidget):
     """
         Qt implementation of the MOOSCommClient
@@ -37,16 +55,18 @@ class MoosWidget(QtGui.QWidget):
         try:
             MoosWidget.moosdb_ip = config['ip']
             MoosWidget.moosdb_port = config['port']
-        except: pass
+        except:
+            pass # default
         self.thread = MoosWidget.MoosThread()
 
-        self.moos_client = MOOSCommClient()
-        self.moos_client.SetOnConnectCallBack(self.onConnect)
-        self.moos_client.SetOnMailCallBack(self.onMail)
-        self.moos_client.Run(self.moosdb_ip, self.moosdb_port, 'survey', 50)
+        self.client = MOOSCommClient()
+        # self.client.SetOnConnectCallBack(self.onConnect)
+        # self.client.SetOnMailCallBack(self.onMail)
+        self.client.unpackCallback = self.unpackMsg
+        self.client.Run(self.moosdb_ip, self.moosdb_port, 'survey', 50)
 
         self.time_buffer = config["time_buffer"]
-        self.desired_variables = config['desired_variables']
+        self.client.desired_variables = self.desired_variables = config['desired_variables']
         self.sensor = config['sensor']
         print('MoosWidget will subscribe to Sensor: %s' % self.sensor)
         print('MoosWidget will subscribe to Variables:'); 
@@ -63,31 +83,29 @@ class MoosWidget(QtGui.QWidget):
         # Check Connection
         for x in range(30):
             sleep(0.1)
-            if self.moos_client.IsConnected():
+            if self.client.IsConnected():
                 print("Connected to MOOSDB")
                 break
-        if not self.moos_client.IsConnected():
+        if not self.client.IsConnected():
             print("MOOSCommClient Error:: Failed to Connect to MOOSDB")
             sys.exit(-1)
 
     def onConnect(self):
         """MOOS callback - required in every MOOS app's class definition"""
-        print('MoosWidget: onConnect: waiting for mail..')
         for var in self.desired_variables:
-            self.moos_client.Register(var)
+            self.client.Register(var)
         return True
 
     def onMail(self):
         """MOOS callback - required in every MOOS app's class definition"""
-        messages = self.moos_client.FetchRecentMail()
+        messages = self.client.FetchRecentMail()
         for message in messages:
             self.unpackMsg(message)
         return True
 
     def unpackMsg(self, msg):
         """parse moos messages. put into dictionary
-        handles conversion of any strings
-        """
+        handles conversion of any strings"""
         # print('\nIn unpack_msg: \t%s' % msg.GetKey())
         time = round(msg.GetTime(), 3)
         name = msg.GetKey() # 'z_____' String
@@ -129,10 +147,7 @@ class MoosWidget(QtGui.QWidget):
 
     @QtCore.Slot()
     def onPositionRequested(self):
-        """survey instance wants a position, trigger send position emit"""
-        # print('\tMoosWidget: onPositionRequested \n\tvalue of current_position:'), pp(self.current_position)
-        print('\tTime Now:  %f\t current_position_time:  %f' % (time_now(), self.current_position_time))
-        
+        """survey instance wants a position, trigger send position emit"""        
         if self.current_position == None or self.current_position_time == None:
             raise MOOSConnectionWarning('Nones in current position')
             return
@@ -140,6 +155,8 @@ class MoosWidget(QtGui.QWidget):
             raise MOOSPositionWarning('Time since last update too old - Disconnected?')
             return
         else:
+            print('\n\tTime Now:  %f\t current_position_time:  %f' % \
+                (time_now(), self.current_position_time))
             out = (self.current_position[p] for p in self.desired_variables)
             self.sendPosition.emit(out)
 

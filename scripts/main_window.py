@@ -6,8 +6,7 @@ from pprint import pprint as pp
 import pdb
 from copy import deepcopy as dcp
 
-from math import sqrt
-from numpy import array
+from numpy import array, inf, sqrt
 
 from PySide import QtGui, QtCore
 from PySide.QtGui import (QWidget, QTabWidget, QItemSelectionModel, 
@@ -93,15 +92,22 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
 
         self.manual_dialog = QtGui.QDialog()
 
-        self.pos_data =  [None]*3 # latest
+        self.pos_data =  array([None]*3) # latest
         self.pos_data_good = False
-        self.variance_threshold = config["variance_threshold"]
+        self.std_dev_threshold = config["std_dev_threshold"]
+        if not self.std_dev_threshold: # blank string --> accept first position received and record
+            self.std_dev_threshold = inf
 
         # Signals/Slots
         self.ui.actionExit.triggered.connect(self.app.closeAllWindows)
         self.ui.recordButton.clicked.connect(self.onRecordRequested)
         self.ui.actionManual_Entry.triggered.connect(self.addManualPoint)
         self.ui.actionWrite.triggered.connect(self.writeToFile)
+
+        # Number cruncing states (iterative)
+        self._sum = array([0.0]*3)
+        self._2sum = array([0.0]*3)
+
     ############################################################################
     #####  Signals & Slots Stuff  ##############################################
     ############################################################################
@@ -121,7 +127,6 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
             n += 1
 
         if n == len(self.config['moos']['desired_variables']): # TODO refer to subscribed vars of either comm set
-            print('\tMainWindow: receivePosition: position successfully received')
             self.pos_data_good = True
         else:
             raise MOOSPositionWarning('Not enough values received')
@@ -130,47 +135,37 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
     def onRecordRequested(self):
         """When the record button is pressed, listens to moos until good 
         position acquired for write"""
-        # Allow abortin record
-        # if not self.ui.recordButton.isChecked(): # was not recording
-        #     pass
-        # else: # user clicked the record button while recording (?)
-        #     # stop the recording process - user has unchecked the button
-        #     pass
-        _sum = _2sum = array([0.0, 0.0, 0.0])
-        n = 0
+        self._sum = array([0.0]*3)
+        self._2sum = array([0.0]*3)
+        n = int(0)
         keep_averaging = True
         print('\nRecord requested')
         while keep_averaging:
             # Get values
             self.pos_data_good = False
-            try:
+            try: # put most time consuming procs in a catcher
                 self.requestPosition.emit()
                 sleep(1)
             except KeyboardInterrupt: # user has requested stop
                 print('Aborting Record')
                 self.ui.recordButton.setChecked(False)
                 break
-            
+
             if not self.pos_data_good:
-                print('\tWaiting for good data [%d]...' % n)
+                print('\tWaiting for good data ...')
                 pass
             else:
-                print('\tGood Data set recieved - (%.2f, %.2f, %.2f) ' % \
+                print('\tGood data set recieved:  (%.2f, %.2f, %.2f) ' % \
                     (self.pos_data[0], self.pos_data[1], self.pos_data[2]))
-                # calculate the variance
-                _mean = _var = array([0.0, 0.0, 0.0])
+
                 n += 1
-                for i in range(3):
-                    _sum[i] += self.pos_data[i]
-                    _2sum[i] += self.pos_data[i]**2
-                    _mean[i] = _sum[i]/n
-                    _var[i] = _2sum[i]/n - _mean[i]**2
+                n, _mean, _stddev_mag = self.iterateRecord(n)   
+                print('\tStd Dev magnitude = %f' % _stddev_mag)
 
-                self.updateLCD(var=_var)
-                _var_mag = sum(_var**2)
-                print('\tVariance magnitude = %f' % _var_mag)
-
-                if _var_mag < self.variance_threshold:
+                # Check the variance magnitude
+                if n == 1: 
+                    continue
+                if _stddev_mag < self.std_dev_threshold:
                     x = _mean[0]
                     y = _mean[1]
                     z = _mean[2]
@@ -225,6 +220,20 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
     #####  Helper functions ####################################################
     ############################################################################
 
+    def iterateRecord(self, n):
+        # calculate the variance
+        self._sum += self.pos_data
+        self._2sum += self.pos_data**2
+        _mean = self._sum/n
+        _var = self._2sum/n - _mean**2
+        _sdev = sqrt(abs(_var))
+
+        self.updateLCD(var=_var)
+        _stddev_mag = sqrt(sum(_sdev**2))
+
+        return n, _mean, _stddev_mag
+
+
     def updateLCD(self, var=(0, 0, 0), stddev=(0, 0, 0)):
         """update the variance LCD's while waiting for point to go low"""
         # print('MainWindow: showVariance')
@@ -238,7 +247,7 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
 
     def addEntry(self, x=None, y=None, z=None, description=None):
         if x is None and y is None and z is None and description is None:
-            raise Exception('I have no dialog box set up for manual entry')
+            raise Exception('something has to go into the entry')
 
         point = {"x":x, "y":y, "z":z, "description":description}
         points = self.table_model.points[:]

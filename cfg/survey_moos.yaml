@@ -1,7 +1,8 @@
 ---
 ip: '127.0.0.1'
 port: 9001
-variance_threshold: 100
+# std_dev_threshold: 1
+std_dev_threshold: '' # give blank string to accept the second valid position sent
 #
 # MOOS
 ros: '' # leave the unused comm system as an empty string
