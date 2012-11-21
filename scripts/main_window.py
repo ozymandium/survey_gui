@@ -147,7 +147,7 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
                 self.requestPosition.emit()
                 sleep(1)
             except KeyboardInterrupt: # user has requested stop
-                print('Aborting Record')
+                print('** Aborting Record')
                 self.ui.recordButton.setChecked(False)
                 break
 
@@ -171,6 +171,7 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
                     z = _mean[2]
                     description = self.ui.descriptionLineEdit.text()
                     self.addEntry(x=x, y=y, z=z, description=description)
+                    print(x,y,z,desc)
 
                     # exit stuff
                     print('\t---> Survey Point Added: ( %f , %f , %f )  %s\n' % (x, y, z, description))
@@ -232,7 +233,6 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
         _stddev_mag = sqrt(sum(_sdev**2))
 
         return n, _mean, _stddev_mag
-
 
     def updateLCD(self, var=(0, 0, 0), stddev=(0, 0, 0)):
         """update the variance LCD's while waiting for point to go low"""

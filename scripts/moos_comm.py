@@ -16,9 +16,14 @@ from PySide import QtGui, QtCore
 
 class MOOSCommClient_(MOOSCommClient):
     desired_variables = []
-    unpackCallback = None
+    unpackCallback = pp
+
+    def __init__(self):
+        super(MOOSCommClient_, self).__init__()
+        # MOOSCommClient.__init__(self)
 
     def onConnectCallBack(self):
+        print('onConnect')
         try:
             for var in self.desired_variables:
                 self.Register(var)
@@ -27,6 +32,7 @@ class MOOSCommClient_(MOOSCommClient):
         return True
 
     def onMailCallBack(self):
+        print('onmail')
         messages = self.FetchRecentMail()
         for message in messages:
             self.unpackCallback(message)
@@ -59,9 +65,10 @@ class MoosWidget(QtGui.QWidget):
             pass # default
         self.thread = MoosWidget.MoosThread()
 
-        self.client = MOOSCommClient()
-        # self.client.SetOnConnectCallBack(self.onConnect)
-        # self.client.SetOnMailCallBack(self.onMail)
+        self.client = MOOSCommClient_()
+
+        # self.client.SetOnConnectCallback(self.client.onConnectCallBack)
+        # self.client.SetOnMailCallback(self.client.onMailCallBack)
         self.client.unpackCallback = self.unpackMsg
         self.client.Run(self.moosdb_ip, self.moosdb_port, 'survey', 50)
 
@@ -90,23 +97,23 @@ class MoosWidget(QtGui.QWidget):
             print("MOOSCommClient Error:: Failed to Connect to MOOSDB")
             sys.exit(-1)
 
-    def onConnect(self):
-        """MOOS callback - required in every MOOS app's class definition"""
-        for var in self.desired_variables:
-            self.client.Register(var)
-        return True
+    # def onConnect(self):
+    #     """MOOS callback - required in every MOOS app's class definition"""
+    #     for var in self.desired_variables:
+    #         self.client.Register(var)
+    #     return True
 
-    def onMail(self):
-        """MOOS callback - required in every MOOS app's class definition"""
-        messages = self.client.FetchRecentMail()
-        for message in messages:
-            self.unpackMsg(message)
-        return True
+    # def onMail(self):
+    #     """MOOS callback - required in every MOOS app's class definition"""
+    #     messages = self.client.FetchRecentMail()
+    #     for message in messages:
+    #         self.unpackMsg(message)
+    #     return True
 
     def unpackMsg(self, msg):
         """parse moos messages. put into dictionary
         handles conversion of any strings"""
-        # print('\nIn unpack_msg: \t%s' % msg.GetKey())
+        print('\nIn unpack_msg: \t%s' % msg.GetKey())
         time = round(msg.GetTime(), 3)
         name = msg.GetKey() # 'z_____' String
         
