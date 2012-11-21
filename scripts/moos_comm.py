@@ -14,18 +14,6 @@ from pymoos.MOOSCommClient import MOOSCommClient
 from PySide import QtGui, QtCore
 
 
-class MOOSConnectionWarning(Warning):
-    """Raise when MOOS Connection is not available or fruitful"""
-    def __init__(self, msg):
-        self.msg = msg
-
-
-class MOOSPositionWarning(Warning):
-    """Raised when position received from MOOS is not valid"""
-    def __init__(self, msg):
-        self.msg = msg
-
-
 class MoosWidget(QtGui.QWidget):
     """
         Qt implementation of the MOOSCommClient
@@ -55,8 +43,7 @@ class MoosWidget(QtGui.QWidget):
         self.moos_client = MOOSCommClient()
         self.moos_client.SetOnConnectCallBack(self.onConnect)
         self.moos_client.SetOnMailCallBack(self.onMail)
-        self.moos_client.Run(self.moosdb_ip, self.moosdb_port, \
-                             'survey', 50)
+        self.moos_client.Run(self.moosdb_ip, self.moosdb_port, 'survey', 50)
 
         self.time_buffer = config["time_buffer"]
         self.desired_variables = config['desired_variables']
@@ -85,16 +72,15 @@ class MoosWidget(QtGui.QWidget):
 
     def onConnect(self):
         """MOOS callback - required in every MOOS app's class definition"""
-        # print('MoosWidget: onConnect: waiting for mail..')
+        print('MoosWidget: onConnect: waiting for mail..')
         for var in self.desired_variables:
             self.moos_client.Register(var)
-        return
+        return True
 
     def onMail(self):
         """MOOS callback - required in every MOOS app's class definition"""
-        # print('\n--- In MoosWidget.onMail :: Retrieving inbox contents ---')
-        # print('MoosWidget: onMail: Fetching recent mail')
-        for message in self.moos_client.FetchRecentMail():
+        messages = self.moos_client.FetchRecentMail()
+        for message in messages:
             self.unpackMsg(message)
         return True
 
@@ -121,7 +107,6 @@ class MoosWidget(QtGui.QWidget):
 
     def handleMsg(self, time, name, valu):
         """ update the current position when possible """
-        # print('\nIn handle_msg: \t%s' % msg['name'])
         if time not in self.partial_positions:
             self.partial_positions[time] = {}
     
@@ -145,17 +130,34 @@ class MoosWidget(QtGui.QWidget):
     @QtCore.Slot()
     def onPositionRequested(self):
         """survey instance wants a position, trigger send position emit"""
-        if not (all(self.current_position) and self.current_position_time):
-            MOOSConnectionWarning('MoosWidget: onPositionRequested: Nones in current position')
-            pass
+        # print('\tMoosWidget: onPositionRequested \n\tvalue of current_position:'), pp(self.current_position)
+        print('\tTime Now:  %f\t current_position_time:  %f' % (time_now(), self.current_position_time))
+        
+        if self.current_position == None or self.current_position_time == None:
+            raise MOOSConnectionWarning('Nones in current position')
+            return
         elif time_now() - self.current_position_time > self.time_buffer:
-            MOOSPositionWarning('MoosWidget: onPositionRequested: Time since last update too old - Disconnected?')
-            pass
+            raise MOOSPositionWarning('Time since last update too old - Disconnected?')
+            return
         else:
-            print('\nMoosWidget: onPositionRequested: current_position is --'); pp(self.current_position)
             out = (self.current_position[p] for p in self.desired_variables)
             self.sendPosition.emit(out)
-        # print('MoosWidget: Emitted Slot sendPosition')
+
+
+class MOOSConnectionWarning(Warning):
+    """Raise when MOOS Connection is not available or fruitful"""
+    def __init__(self, msg):
+        self.msg = msg
+    def __str__(self):
+        return repr(self.msg)
+
+
+class MOOSPositionWarning(Warning):
+    """Raised when position received from MOOS is not valid"""
+    def __init__(self, msg):
+        self.msg = msg
+    def __str__(self):
+        return repr(self.msg)
 
 
 ################################################################################

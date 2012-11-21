@@ -1,7 +1,7 @@
 ---
 ip: '127.0.0.1'
 port: 9001
-variance_threshold: 0.2
+variance_threshold: 100
 #
 # MOOS
 ros: '' # leave the unused comm system as an empty string
@@ -9,13 +9,10 @@ moos:
     ip: '127.0.0.1'
     port: 9000
     # delete data older than this if not filled, do not send latest if older than this
-    time_buffer: 5.0 
+    time_buffer: 7.0 
     #
-    sensor: 'gNovatel'
+    sensor: 'gUblox'
     desired_variables:
-    - 'zX'
-    - 'zY'
-    - 'zZ'
-    - 'zXStdDev'
-    - 'zYStdDev'
-    - 'zZStdDev'
+    - 'ecefX'
+    - 'ecefY'
+    - 'ecefZ'

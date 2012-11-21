@@ -6,6 +6,9 @@ from pprint import pprint as pp
 import pdb
 from copy import deepcopy as dcp
 
+from math import sqrt
+from numpy import array
+
 from PySide import QtGui, QtCore
 from PySide.QtGui import (QWidget, QTabWidget, QItemSelectionModel, 
                           QMessageBox, QTableView, QSortFilterProxyModel,
@@ -36,10 +39,9 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
             self.exec_()
 
     def __init__(self, app, ui, config, parent=None):
-        print('\n---------- GAVLab RTK Survey ----------')
         super(MainWindow, self).__init__(parent)
-        self.app = app # reference to the Qt Application
-        
+        print('\n---------- GAVLab RTK Survey ----------')
+
         def setupMOOS():
             # manual threading is only necessary if reading messages from moos
             # roslaunch automatically configures threads - ros is superior to moos
@@ -72,9 +74,11 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
             setupMOOS()
         else:
             raise Exception('Need a config file with comm architecture')
-      
+        
+        self.app = app # reference to the Qt Application
         self.ui = ui
         self.ui.setupUi(self)
+        self.config = config
 
         # Table
         self.table_model = TableModel()
@@ -89,7 +93,7 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
 
         self.manual_dialog = QtGui.QDialog()
 
-        self.pos_data =  [None]*6 # latest
+        self.pos_data =  [None]*3 # latest
         self.pos_data_good = False
         self.variance_threshold = config["variance_threshold"]
 
@@ -98,81 +102,88 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
         self.ui.recordButton.clicked.connect(self.onRecordRequested)
         self.ui.actionManual_Entry.triggered.connect(self.addManualPoint)
         self.ui.actionWrite.triggered.connect(self.writeToFile)
-
     ############################################################################
     #####  Signals & Slots Stuff  ##############################################
     ############################################################################
 
     @QtCore.Slot(tuple)
     def receivePosition(self, pos):
-        """connected to moos widget's position sender"""
+        """connected to moos widget's position sender
+            Assume self.pos_data_good = False at invocation"""
         ## TODO make indexing better here (check length of pos with length of pos_data)
         n = 0
         while True:
-            print('MainWindow: receivePosition: iterating through...')
             try: 
                 i = pos.next()
-            except StopIteration:
-                print('MainWindow: receivePosition: reached end of pos')
-                break
+                self.pos_data[n] = i
+            except StopIteration: break
 
-            if not i:
-                MOOSPositionWarning('MainWindow: receivePosition: got a None value')
-                break
-            
-            self.pos_data[n] = pos.next()
-            print('MainWindow: receivePosition position successfully received')
             n += 1
-        
-        if all(self.pos_data != None):
-            self.pos_data_good = True
 
+        if n == len(self.config['moos']['desired_variables']): # TODO refer to subscribed vars of either comm set
+            print('\tMainWindow: receivePosition: position successfully received')
+            self.pos_data_good = True
+        else:
+            raise MOOSPositionWarning('Not enough values received')
+            
     @QtCore.Slot()
     def onRecordRequested(self):
         """When the record button is pressed, listens to moos until good 
         position acquired for write"""
-        if not self.ui.recordButton.isChecked():
-            pass
-        else:
-            # stop the recording process - user has unchecked the button
-            pass
-
-        print('\nRecord requested')
-        _sum = _2sum = [0.0, 0.0, 0.0]
+        # Allow abortin record
+        # if not self.ui.recordButton.isChecked(): # was not recording
+        #     pass
+        # else: # user clicked the record button while recording (?)
+        #     # stop the recording process - user has unchecked the button
+        #     pass
+        _sum = _2sum = array([0.0, 0.0, 0.0])
         n = 0
         keep_averaging = True
+        print('\nRecord requested')
         while keep_averaging:
             # Get values
             self.pos_data_good = False
-            self.requestPosition.emit()
-            sleep(0.1)
-            if (not self.pos_data_good) or (not all(self.pos_data)):
-                print('MainWindow: onRecordRequested: waiting for good data...')
-                pass
-
-            print('\nMainWindow: onRecordRequested: using this position list --'); pp(self.pos_data)
-            # calculate the variance
-            _mean = [0.0, 0.0, 0.0]
-            _var = [0.0, 0.0, 0.0]
-            n += 1
-            for i in range(3):
-                _sum[i] += self.pos_data[i]
-                _2sum[i] += self.pos_data[i]**2
-                _mean[i] = _sum[i]/n
-                _var[i] = _2sum[i]/n - _mean[i]**2
-
-            self.updateLCD(var=_var, stddev=self.pos_data[3:6])
-
-            if sum(_var) < self.variance_threshold:
-                x = _mean[0]
-                y = _mean[1]
-                z = _mean[2]
-                description = self.ui.descriptionLineEdit.text()
-                self.addEntry(x=x, y=y, z=z, description=description)
-
-                print('Survey Point Added: ( %f , %f , %f )  %s' % (x, y, z, description))
-                keep_averaging = False
+            try:
+                self.requestPosition.emit()
+                sleep(1)
+            except KeyboardInterrupt: # user has requested stop
+                print('Aborting Record')
                 self.ui.recordButton.setChecked(False)
+                break
+            
+            if not self.pos_data_good:
+                print('\tWaiting for good data [%d]...' % n)
+                pass
+            else:
+                print('\tGood Data set recieved - (%.2f, %.2f, %.2f) ' % \
+                    (self.pos_data[0], self.pos_data[1], self.pos_data[2]))
+                # calculate the variance
+                _mean = _var = array([0.0, 0.0, 0.0])
+                n += 1
+                for i in range(3):
+                    _sum[i] += self.pos_data[i]
+                    _2sum[i] += self.pos_data[i]**2
+                    _mean[i] = _sum[i]/n
+                    _var[i] = _2sum[i]/n - _mean[i]**2
+
+                self.updateLCD(var=_var)
+                _var_mag = sum(_var**2)
+                print('\tVariance magnitude = %f' % _var_mag)
+
+                if _var_mag < self.variance_threshold:
+                    x = _mean[0]
+                    y = _mean[1]
+                    z = _mean[2]
+                    description = self.ui.descriptionLineEdit.text()
+                    self.addEntry(x=x, y=y, z=z, description=description)
+
+                    # exit stuff
+                    print('\t---> Survey Point Added: ( %f , %f , %f )  %s\n' % (x, y, z, description))
+                    keep_averaging = False
+                    self.ui.recordButton.setChecked(False) # done recording
+                    self.ui.descriptionLineEdit.setText('')
+                else:
+                    print('\tWaiting for variance to drop...\n')
 
     @QtCore.Slot()
     def addManualPoint(self):
@@ -189,7 +200,7 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
                     "Description:", QtGui.QLineEdit.Normal)
         if not desc_ok: return
 
-        self.addEntry(x=z, y=y, z=z, description=desc)
+        self.addEntry(x=x, y=y, z=z, description=desc)
 
     @QtCore.Slot()
     def writeToFile(self):
