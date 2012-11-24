@@ -13,6 +13,8 @@ from ui_main_window import Ui_MainWindow
 
 
 viz_config = load(file('/home/rgcofield/devel/survey_ws/survey_gui/cfg/survey_moos.yaml'))
+global DEBUG
+DEBUG = True
 
 
 def main():

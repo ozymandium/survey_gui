@@ -171,7 +171,7 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
                     z = _mean[2]
                     description = self.ui.descriptionLineEdit.text()
                     self.addEntry(x=x, y=y, z=z, description=description)
-                    print(x,y,z,desc)
+                    print(x,y,z,description)
 
                     # exit stuff
                     print('\t---> Survey Point Added: ( %f , %f , %f )  %s\n' % (x, y, z, description))

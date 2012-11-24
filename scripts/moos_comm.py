@@ -13,7 +13,6 @@ from pymoos.MOOSCommClient import MOOSCommClient
 
 from PySide import QtGui, QtCore
 
-
 class MOOSCommClient_(MOOSCommClient):
     desired_variables = []
     unpackCallback = pp
@@ -39,9 +38,7 @@ class MOOSCommClient_(MOOSCommClient):
 
 
 class MoosWidget(QtGui.QWidget):
-    """
-        Qt implementation of the MOOSCommClient
-    """
+    """Qt implementation of the MOOSCommClient    """
     sendPosition = QtCore.Signal(tuple)
 
     moosdb_ip = '127.0.0.1'
@@ -65,15 +62,14 @@ class MoosWidget(QtGui.QWidget):
             pass # default
         self.thread = MoosWidget.MoosThread()
 
-        self.client = MOOSCommClient_()
-
-        # self.client.SetOnConnectCallback(self.client.onConnectCallBack)
-        # self.client.SetOnMailCallback(self.client.onMailCallBack)
-        self.client.unpackCallback = self.unpackMsg
-        self.client.Run(self.moosdb_ip, self.moosdb_port, 'survey', 50)
-
+        # self.client = MOOSCommClient_()
+        # self.client.desired_variables = self.desired_variables = config['desired_variables']
+        # self.client.SetOnConnectCallBack(self.client.onConnectCallBack)
+        # self.client.SetOnMailCallBack(self.client.onMailCallBack)
+        # self.client.unpackCallback = self.unpackMsg
+        
+        self.desired_variables = config['desired_variables']
         self.time_buffer = config["time_buffer"]
-        self.client.desired_variables = self.desired_variables = config['desired_variables']
         self.sensor = config['sensor']
         print('MoosWidget will subscribe to Sensor: %s' % self.sensor)
         print('MoosWidget will subscribe to Variables:'); 
@@ -87,6 +83,12 @@ class MoosWidget(QtGui.QWidget):
             self.current_position[i] = None
         self.num_var = len(self.desired_variables)
 
+        # Setup MOOS
+        self.client = MOOSCommClient()
+        self.client.SetOnConnectCallBack(self.onConnect)
+        self.client.SetOnMailCallBack(self.onMail)
+        self.client.Run(self.moosdb_ip, self.moosdb_port, 'survey', 50)
+
         # Check Connection
         for x in range(30):
             sleep(0.1)
@@ -97,23 +99,23 @@ class MoosWidget(QtGui.QWidget):
             print("MOOSCommClient Error:: Failed to Connect to MOOSDB")
             sys.exit(-1)
 
-    # def onConnect(self):
-    #     """MOOS callback - required in every MOOS app's class definition"""
-    #     for var in self.desired_variables:
-    #         self.client.Register(var)
-    #     return True
+    def onConnect(self):
+        """MOOS callback - required in every MOOS app's class definition"""
+        for var in self.desired_variables:
+            self.client.Register(var)
+        return True
 
-    # def onMail(self):
-    #     """MOOS callback - required in every MOOS app's class definition"""
-    #     messages = self.client.FetchRecentMail()
-    #     for message in messages:
-    #         self.unpackMsg(message)
-    #     return True
+    def onMail(self):
+        """MOOS callback - required in every MOOS app's class definition"""
+        messages = self.client.FetchRecentMail()
+        for message in messages:
+            self.unpackMsg(message)
+        return True
 
     def unpackMsg(self, msg):
         """parse moos messages. put into dictionary
         handles conversion of any strings"""
-        print('\nIn unpack_msg: \t%s' % msg.GetKey())
+        # print('\nIn unpack_msg: \t%s' % msg.GetKey())
         time = round(msg.GetTime(), 3)
         name = msg.GetKey() # 'z_____' String
         
@@ -163,7 +165,7 @@ class MoosWidget(QtGui.QWidget):
             return
         else:
             print('\n\tTime Now:  %f\t current_position_time:  %f' % \
-                (time_now(), self.current_position_time))
+                    (time_now(), self.current_position_time))
             out = (self.current_position[p] for p in self.desired_variables)
             self.sendPosition.emit(out)
 
