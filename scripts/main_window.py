@@ -169,12 +169,11 @@ class MainWindow(QtGui.QMainWindow, QtCore.QObject):
                     x = _mean[0]
                     y = _mean[1]
                     z = _mean[2]
-                    description = self.ui.descriptionLineEdit.text()
-                    self.addEntry(x=x, y=y, z=z, description=description)
-                    print(x,y,z,description)
+                    description = str(self.ui.descriptionLineEdit.text())
+                    self.addEntry(x=str(x), y=str(y), z=str(z), description=description)
 
                     # exit stuff
-                    print('\t---> Survey Point Added: ( %f , %f , %f )  %s\n' % (x, y, z, description))
+                    print('\t---> Survey Point Added: ( %.2f , %.2f , %.2f )  %s\n' % (x, y, z, description))
                     keep_averaging = False
                     self.ui.recordButton.setChecked(False) # done recording
                     self.ui.descriptionLineEdit.setText('')
