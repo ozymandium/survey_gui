@@ -7,13 +7,13 @@ std_dev_threshold: '' # give blank string to accept the second valid position se
 # MOOS
 ros: '' # leave the unused comm system as an empty string
 moos:
-    ip: '127.0.0.1'
+    ip: '192.168.1.44'
     port: 9000
     # delete data older than this if not filled, do not send latest if older than this
     time_buffer: 7.0 
     #
-    sensor: 'gUblox'
+    sensor: 'gNovatel'
     desired_variables:
-    - 'ecefX'
-    - 'ecefY'
-    - 'ecefZ'
+    - 'zX'
+    - 'zY'
+    - 'zZ'
